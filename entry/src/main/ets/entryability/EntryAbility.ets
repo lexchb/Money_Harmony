@@ -1,6 +1,7 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import { dbHelper } from '../model/DatabaseHelper';
 
 const DOMAIN = 0x0000;
 
@@ -14,9 +15,10 @@ export default class EntryAbility extends UIAbility {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onDestroy');
   }
 
-  onWindowStageCreate(windowStage: window.WindowStage): void {
-    // Main window is created, set main page for this ability
+  async onWindowStageCreate(windowStage: window.WindowStage): Promise<void> {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
+
+    await dbHelper.init(this.context);
 
     windowStage.loadContent('pages/Index', (err) => {
       if (err.code) {
