@@ -159,7 +159,7 @@ struct AddBill {
           .onChange((v) => { this.amount = v; })
       }
       .padding({ left: 24, right: 24, bottom: 20 })
-      .border({ bottom: { width: 0.5, color: '#eee' } })
+      .border({ width: { bottom: 0.5 }, color: { bottom: '#eee' } })
 
       // ===== 分类选择 =====
       Column() {
@@ -177,7 +177,7 @@ struct AddBill {
         .width('100%')
       }
       .padding({ left: 24, right: 24, top: 16, bottom: 16 })
-      .border({ bottom: { width: 0.5, color: '#eee' } })
+      .border({ width: { bottom: 0.5 }, color: { bottom: '#eee' } })
 
       // ===== 日期选择 =====
       Row() {
@@ -187,7 +187,7 @@ struct AddBill {
         DatePicker({ start: new Date(2020, 0, 1), end: new Date(2030, 11, 31), selected: new Date(this.date) })
           .width(0)
           .height(0)
-          .onChange((d) => {
+          .onDateChange((d: Date) => {
             const y = d.getFullYear();
             const m = String(d.getMonth() + 1).padStart(2, '0');
             const day = String(d.getDate()).padStart(2, '0');
@@ -195,7 +195,7 @@ struct AddBill {
           })
       }
       .padding({ left: 24, right: 24, top: 16, bottom: 16 })
-      .border({ bottom: { width: 0.5, color: '#eee' } })
+      .border({ width: { bottom: 0.5 }, color: { bottom: '#eee' } })
       .onClick(() => {
         // Trigger date picker - in a real app use a dialog
       })
@@ -211,7 +211,7 @@ struct AddBill {
           .onChange((v) => { this.note = v; })
       }
       .padding({ left: 24, right: 24, top: 16, bottom: 16 })
-      .border({ bottom: { width: 0.5, color: '#eee' } })
+      .border({ width: { bottom: 0.5 }, color: { bottom: '#eee' } })
 
       // ===== 保存按钮 =====
       Button(this.isEdit ? '保存修改' : '保存')
