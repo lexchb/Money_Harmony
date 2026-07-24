@@ -19,14 +19,10 @@ struct Index {
   }
 
   async loadBills(): Promise<void> {
-    try {
-      this.bills = await dbHelper.getBillsByMonth(this.currentMonth);
-      const stats = await dbHelper.getMonthlyStats(this.currentMonth);
-      this.totalIncome = stats.totalIncome;
-      this.totalExpense = stats.totalExpense;
-    } catch (e) {
-      console.error('loadBills error:', (e as Error).message);
-    }
+    this.bills = await dbHelper.getBillsByMonth(this.currentMonth);
+    const stats = await dbHelper.getMonthlyStats(this.currentMonth);
+    this.totalIncome = stats.totalIncome;
+    this.totalExpense = stats.totalExpense;
   }
 
   prevMonth(): void {

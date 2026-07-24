@@ -26,19 +26,15 @@ struct AddBill {
   }
 
   async loadBill(id: number): Promise<void> {
-    try {
-      const all = await dbHelper.getAllBills();
-      const bill = all.find(b => b.id === id);
-      if (bill) {
-        this.amount = String(bill.amount);
-        this.billType = bill.type;
-        this.category = bill.category;
-        this.date = bill.date;
-        this.note = bill.note;
-        this.categories = getCategories(bill.type);
-      }
-    } catch (e) {
-      console.error('loadBill error:', (e as Error).message);
+    const all = await dbHelper.getAllBills();
+    const bill = all.find(b => b.id === id);
+    if (bill) {
+      this.amount = String(bill.amount);
+      this.billType = bill.type;
+      this.category = bill.category;
+      this.date = bill.date;
+      this.note = bill.note;
+      this.categories = getCategories(bill.type);
     }
   }
 
@@ -57,31 +53,22 @@ struct AddBill {
       return;
     }
 
-    try {
-      const bill: Bill = {
-        amount: amountNum,
-        type: this.billType,
-        category: this.category,
-        date: this.date,
-        note: this.note,
-      };
+    const bill: Bill = {
+      amount: amountNum,
+      type: this.billType,
+      category: this.category,
+      date: this.date,
+      note: this.note,
+    };
 
-      if (this.isEdit) {
-        bill.id = this.billId;
-        await dbHelper.updateBill(bill);
-      } else {
-        await dbHelper.addBill(bill);
-      }
-
-      router.back();
-    } catch (e) {
-      console.error('saveBill error:', (e as Error).message);
-      AlertDialog.show({
-        title: '保存失败',
-        message: (e as Error).message,
-        confirm: { value: '确定', action: () => {} }
-      });
+    if (this.isEdit) {
+      bill.id = this.billId;
+      await dbHelper.updateBill(bill);
+    } else {
+      await dbHelper.addBill(bill);
     }
+
+    router.back();
   }
 
   deleteBill(): void {
@@ -96,12 +83,8 @@ struct AddBill {
         value: '删除',
         fontColor: '#e74c3c',
         action: async () => {
-          try {
-            await dbHelper.deleteBill(this.billId);
-            router.back();
-          } catch (e) {
-              console.error('deleteBill error:', (e as Error).message);
-          }
+          await dbHelper.deleteBill(this.billId);
+          router.back();
         }
       }
     });

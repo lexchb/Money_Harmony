@@ -37,13 +37,13 @@ class DatabaseHelper {
       await this.store.executeSql(CREATE_TABLE_SQL);
     } catch (e) {
       console.error('Database init failed:', (e as Error).message);
-      throw e;
     }
   }
 
   async addBill(bill: Bill): Promise<number> {
     if (!this.store) {
-      throw new Error('Database not initialized');
+      console.error('Database not initialized');
+      return -1;
     }
     const valueBucket: relationalStore.ValuesBucket = {
       amount: bill.amount,
@@ -58,7 +58,8 @@ class DatabaseHelper {
 
   async getAllBills(): Promise<Bill[]> {
     if (!this.store) {
-      throw new Error('Database not initialized');
+      console.error('Database not initialized');
+      return [];
     }
     const predicates = new relationalStore.RdbPredicates(TABLE_NAME);
     predicates.orderByDesc('date');
@@ -84,7 +85,8 @@ class DatabaseHelper {
 
   async getBillsByMonth(yearMonth: string): Promise<Bill[]> {
     if (!this.store) {
-      throw new Error('Database not initialized');
+      console.error('Database not initialized');
+      return [];
     }
     const predicates = new relationalStore.RdbPredicates(TABLE_NAME);
     predicates.like('date', `${yearMonth}%`);
@@ -111,7 +113,8 @@ class DatabaseHelper {
 
   async updateBill(bill: Bill): Promise<number> {
     if (!this.store) {
-      throw new Error('Database not initialized');
+      console.error('Database not initialized');
+      return 0;
     }
     const predicates = new relationalStore.RdbPredicates(TABLE_NAME);
     predicates.equalTo('id', bill.id);
@@ -127,7 +130,8 @@ class DatabaseHelper {
 
   async deleteBill(id: number): Promise<number> {
     if (!this.store) {
-      throw new Error('Database not initialized');
+      console.error('Database not initialized');
+      return 0;
     }
     const predicates = new relationalStore.RdbPredicates(TABLE_NAME);
     predicates.equalTo('id', id);
@@ -136,7 +140,8 @@ class DatabaseHelper {
 
   async getMonthlyStats(yearMonth: string): Promise<MonthlyStats> {
     if (!this.store) {
-      throw new Error('Database not initialized');
+      console.error('Database not initialized');
+      return { totalIncome: 0, totalExpense: 0 } as MonthlyStats;
     }
     const sql = `SELECT
       COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) AS totalIncome,
