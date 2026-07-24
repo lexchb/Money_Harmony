@@ -25,7 +25,7 @@ struct Index {
       this.totalIncome = stats.totalIncome;
       this.totalExpense = stats.totalExpense;
     } catch (e) {
-      console.error('loadBills error:', JSON.stringify(e));
+      console.error('loadBills error:', (e as Error).message);
     }
   }
 
@@ -63,18 +63,17 @@ struct Index {
       // ===== 顶部月切换 + 汇总 =====
       Column() {
         Row() {
-          Image($r('app.media.startIcon'))
-            .width(24)
-            .height(24)
+          Text('◀')
+            .fontSize(20)
+            .fontColor('#007aff')
             .onClick(() => this.prevMonth())
           Text(this.currentMonth)
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
             .margin({ left: 12, right: 12 })
-          Image($r('app.media.startIcon'))
-            .width(24)
-            .height(24)
-            .rotate({ angle: 180 })
+          Text('▶')
+            .fontSize(20)
+            .fontColor('#007aff')
             .onClick(() => this.nextMonth())
         }
         .justifyContent(FlexAlign.Center)
@@ -142,7 +141,7 @@ struct Index {
           ForEach(this.bills, (bill: Bill) => {
             ListItem() {
               Row() {
-                // 分类图标（占位）
+                // 分类图标
                 Circle()
                   .width(40)
                   .height(40)
@@ -172,7 +171,7 @@ struct Index {
               .padding({ left: 16, right: 16, top: 12, bottom: 12 })
             }
             .onClick(() => this.goToEdit(bill))
-          })
+          }, (bill: Bill): string => String(bill.id ?? 0))
         }
         .width('100%')
         .height('100%')

@@ -38,7 +38,7 @@ struct AddBill {
         this.categories = getCategories(bill.type);
       }
     } catch (e) {
-      console.error('loadBill error:', JSON.stringify(e));
+      console.error('loadBill error:', (e as Error).message);
     }
   }
 
@@ -75,7 +75,12 @@ struct AddBill {
 
       router.back();
     } catch (e) {
-      console.error('saveBill error:', JSON.stringify(e));
+      console.error('saveBill error:', (e as Error).message);
+      AlertDialog.show({
+        title: '保存失败',
+        message: (e as Error).message,
+        confirm: { value: '确定', action: () => {} }
+      });
     }
   }
 
@@ -95,7 +100,7 @@ struct AddBill {
             await dbHelper.deleteBill(this.billId);
             router.back();
           } catch (e) {
-            console.error('deleteBill error:', JSON.stringify(e));
+              console.error('deleteBill error:', (e as Error).message);
           }
         }
       }
@@ -172,7 +177,7 @@ struct AddBill {
               .fontColor(this.category === cat ? Color.White : '#333')
               .margin({ bottom: 8 })
               .onClick(() => { this.category = cat; })
-          })
+          }, (cat: string): string => cat)
         }
         .width('100%')
       }
