@@ -68,7 +68,7 @@ struct AddBill {
       await dbHelper.addBill(bill);
     }
 
-    router.back();
+    router.replaceUrl({ url: 'pages/Index' });
   }
 
   showDatePicker(): void {
@@ -98,7 +98,7 @@ struct AddBill {
         fontColor: '#e74c3c',
         action: async () => {
           await dbHelper.deleteBill(this.billId);
-          router.back();
+          router.replaceUrl({ url: 'pages/Index' });
         }
       }
     });
@@ -110,7 +110,7 @@ struct AddBill {
       Row() {
         Button() { Text('取消').fontColor('#007aff') }
           .backgroundColor(Color.Transparent)
-          .onClick(() => router.back())
+          .onClick(() => router.replaceUrl({ url: 'pages/Index' }))
 
         Text(this.isEdit ? '编辑账单' : '添加账单')
           .fontSize(18)

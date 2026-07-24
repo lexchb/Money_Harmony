@@ -44,11 +44,11 @@ struct Index {
   }
 
   goToAdd(): void {
-    router.pushUrl({ url: 'pages/AddBill' });
+    router.replaceUrl({ url: 'pages/AddBill' });
   }
 
   goToEdit(bill: Bill): void {
-    router.pushUrl({
+    router.replaceUrl({
       url: 'pages/AddBill',
       params: { billId: bill.id }
     });
@@ -59,18 +59,28 @@ struct Index {
       // ===== 顶部月切换 + 汇总 =====
       Column() {
         Row() {
-          Text('◀')
-            .fontSize(20)
-            .fontColor('#007aff')
-            .onClick(() => this.prevMonth())
+          Button() {
+            SymbolGlyph($r('sys.symbol.chevron_left'))
+              .fontSize(30)
+              .fontColor(['#007aff'])
+          }
+          .backgroundColor(Color.Transparent)
+          .width(50)
+          .height(50)
+          .onClick(() => this.prevMonth())
           Text(this.currentMonth)
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
             .margin({ left: 12, right: 12 })
-          Text('▶')
-            .fontSize(20)
-            .fontColor('#007aff')
-            .onClick(() => this.nextMonth())
+          Button() {
+            SymbolGlyph($r('sys.symbol.chevron_right'))
+              .fontSize(30)
+              .fontColor(['#007aff'])
+          }
+          .backgroundColor(Color.Transparent)
+          .width(50)
+          .height(50)
+          .onClick(() => this.nextMonth())
         }
         .justifyContent(FlexAlign.Center)
         .width('100%')
