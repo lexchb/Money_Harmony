@@ -15,10 +15,14 @@ export default class EntryAbility extends UIAbility {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onDestroy');
   }
 
-  async onWindowStageCreate(windowStage: window.WindowStage): Promise<void> {
+  onWindowStageCreate(windowStage: window.WindowStage): void {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
 
-    await dbHelper.init(this.context);
+    dbHelper.init(this.context).then(() => {
+      hilog.info(DOMAIN, 'testTag', 'Database initialized');
+    }).catch((e: Error) => {
+      hilog.error(DOMAIN, 'testTag', 'Database init failed: %{public}s', e.message);
+    });
 
     windowStage.loadContent('pages/Index', (err) => {
       if (err.code) {

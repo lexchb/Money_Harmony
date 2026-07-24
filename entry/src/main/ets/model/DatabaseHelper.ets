@@ -28,12 +28,17 @@ class DatabaseHelper {
     if (this.store) {
       return;
     }
-    const config: relationalStore.StoreConfig = {
-      name: DB_NAME,
-      securityLevel: relationalStore.SecurityLevel.S1,
-    };
-    this.store = await relationalStore.getRdbStore(context, config);
-    await this.store.executeSql(CREATE_TABLE_SQL);
+    try {
+      const config: relationalStore.StoreConfig = {
+        name: DB_NAME,
+        securityLevel: relationalStore.SecurityLevel.S1,
+      };
+      this.store = await relationalStore.getRdbStore(context, config);
+      await this.store.executeSql(CREATE_TABLE_SQL);
+    } catch (e) {
+      console.error('Database init failed:', (e as Error).message);
+      throw e;
+    }
   }
 
   async addBill(bill: Bill): Promise<number> {
