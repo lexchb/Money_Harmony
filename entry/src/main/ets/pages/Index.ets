@@ -30,14 +30,18 @@ struct Index {
   }
 
   prevMonth(): void {
-    const [y, m] = this.currentMonth.split('-').map(Number);
+    const parts = this.currentMonth.split('-');
+    const y = parseInt(parts[0]);
+    const m = parseInt(parts[1]);
     const d = new Date(y, m - 2, 1);
     this.currentMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     this.loadBills();
   }
 
   nextMonth(): void {
-    const [y, m] = this.currentMonth.split('-').map(Number);
+    const parts = this.currentMonth.split('-');
+    const y = parseInt(parts[0]);
+    const m = parseInt(parts[1]);
     const d = new Date(y, m, 1);
     this.currentMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     this.loadBills();
@@ -170,6 +174,8 @@ struct Index {
             .onClick(() => this.goToEdit(bill))
           })
         }
+        .width('100%')
+        .height('100%')
         .layoutWeight(1)
         .divider({ strokeWidth: 0.5, color: '#eee' })
       }
