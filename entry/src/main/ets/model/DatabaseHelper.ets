@@ -1,5 +1,5 @@
 import { relationalStore } from '@kit.ArkData';
-import { contextConstant } from '@kit.AbilityKit';
+import { Context } from '@kit.AbilityKit';
 import { Bill, BillType } from './Bill';
 
 const DB_NAME = 'MoneyHarmony.db';
@@ -16,10 +16,15 @@ const CREATE_TABLE_SQL = `CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
   createTime INTEGER NOT NULL
 )`;
 
+export interface MonthlyStats {
+  totalIncome: number;
+  totalExpense: number;
+}
+
 class DatabaseHelper {
   private store: relationalStore.RdbStore | null = null;
 
-  async init(context: contextConstant.Context): Promise<void> {
+  async init(context: Context): Promise<void> {
     if (this.store) {
       return;
     }
@@ -124,7 +129,7 @@ class DatabaseHelper {
     return this.store.delete(predicates);
   }
 
-  async getMonthlyStats(yearMonth: string): Promise<{ totalIncome: number; totalExpense: number }> {
+  async getMonthlyStats(yearMonth: string): Promise<MonthlyStats> {
     if (!this.store) {
       throw new Error('Database not initialized');
     }
@@ -140,7 +145,7 @@ class DatabaseHelper {
       totalExpense = resultSet.getDouble(resultSet.getColumnIndex('totalExpense'));
     }
     resultSet.close();
-    return { totalIncome, totalExpense };
+    return { totalIncome: totalIncome, totalExpense: totalExpense } as MonthlyStats;
   }
 }
 
