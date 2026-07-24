@@ -71,6 +71,20 @@ struct AddBill {
     router.back();
   }
 
+  showDatePicker(): void {
+    DatePickerDialog.show({
+      start: new Date(2020, 0, 1),
+      end: new Date(2030, 11, 31),
+      selected: new Date(this.date),
+      onDateAccept: (d: Date) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        this.date = `${y}-${m}-${day}`;
+      }
+    });
+  }
+
   deleteBill(): void {
     AlertDialog.show({
       title: '确认删除',
@@ -172,21 +186,10 @@ struct AddBill {
         Text('日期').fontSize(16).fontColor('#333')
         Blank()
         Text(this.date).fontSize(16).fontColor('#007aff')
-        DatePicker({ start: new Date(2020, 0, 1), end: new Date(2030, 11, 31), selected: new Date(this.date) })
-          .width(0)
-          .height(0)
-          .onDateChange((d: Date) => {
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            this.date = `${y}-${m}-${day}`;
-          })
       }
       .padding({ left: 24, right: 24, top: 16, bottom: 16 })
       .border({ width: { bottom: 0.5 }, color: { bottom: '#eee' } })
-      .onClick(() => {
-        // Trigger date picker - in a real app use a dialog
-      })
+      .onClick(() => this.showDatePicker())
 
       // ===== 备注输入 =====
       Row() {
