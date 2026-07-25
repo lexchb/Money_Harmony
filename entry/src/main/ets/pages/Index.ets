@@ -114,6 +114,7 @@ struct Index {
                 .fontSize(22)
                 .fontWeight(FontWeight.Bold)
                 .fontColor('#e74c3c')
+                .animation({ duration: 300, curve: Curve.EaseInOut })
             }
             .layoutWeight(1)
             .alignItems(HorizontalAlign.Center)
@@ -126,6 +127,7 @@ struct Index {
                 .fontSize(22)
                 .fontWeight(FontWeight.Bold)
                 .fontColor('#27ae60')
+                .animation({ duration: 300, curve: Curve.EaseInOut })
             }
             .layoutWeight(1)
             .alignItems(HorizontalAlign.Center)
@@ -138,6 +140,7 @@ struct Index {
                 .fontSize(22)
                 .fontWeight(FontWeight.Bold)
                 .fontColor('#2980b9')
+                .animation({ duration: 300, curve: Curve.EaseInOut })
             }
             .layoutWeight(1)
             .alignItems(HorizontalAlign.Center)
@@ -199,6 +202,16 @@ struct Index {
                 .padding({ left: 16, right: 16, top: 12, bottom: 12 })
               }
               .onClick(() => this.goToEdit(bill))
+              .transition(
+                TransitionEffect.asymmetric(
+                  TransitionEffect.translate({ y: 30 })
+                    .combine(TransitionEffect.opacity(0))
+                    .animation({ duration: 300 }),
+                  TransitionEffect.translate({ x: -30 })
+                    .combine(TransitionEffect.opacity(0))
+                    .animation({ duration: 200 })
+                )
+              )
             }, (bill: Bill): string => `${bill.id}_${bill.amount}_${bill.category}_${bill.note}_${bill.date}`)
           }
           .width('100%')

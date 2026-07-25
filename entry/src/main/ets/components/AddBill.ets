@@ -89,13 +89,13 @@ export struct AddBillPage {
         // ===== 类型切换 =====
         Row() {
           Button('支出')
-            .type(this.billType === BillType.EXPENSE ? ButtonType.Capsule : ButtonType.Normal)
+            .type(ButtonType.Capsule)
             .backgroundColor(this.billType === BillType.EXPENSE ? '#e74c3c' : '#f0f0f0')
             .fontColor(this.billType === BillType.EXPENSE ? Color.White : '#333')
             .onClick(() => this.onTypeChange(BillType.EXPENSE))
 
           Button('收入')
-            .type(this.billType === BillType.INCOME ? ButtonType.Capsule : ButtonType.Normal)
+            .type(ButtonType.Capsule)
             .backgroundColor(this.billType === BillType.INCOME ? '#27ae60' : '#f0f0f0')
             .fontColor(this.billType === BillType.INCOME ? Color.White : '#333')
             .onClick(() => this.onTypeChange(BillType.INCOME))
@@ -126,7 +126,7 @@ export struct AddBillPage {
           Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
             ForEach(this.categories, (cat: string) => {
               Button(cat)
-                .type(this.category === cat ? ButtonType.Capsule : ButtonType.Normal)
+                .type(ButtonType.Capsule)
                 .backgroundColor(this.category === cat ? '#007aff' : '#f0f0f0')
                 .fontColor(this.category === cat ? Color.White : '#333')
                 .margin({ bottom: 8 })
