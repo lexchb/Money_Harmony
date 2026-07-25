@@ -1,7 +1,7 @@
 import { MultiNavPathStack } from '@kit.ArkUI';
 import { Bill, BillType, formatMoney, todayString } from '../model/Bill';
 import { dbHelper } from '../model/DatabaseHelper';
-import { AddBillPage } from './AddBill';
+import { AddBillPage } from '../components/AddBill';
 
 @Entry
 @Component
