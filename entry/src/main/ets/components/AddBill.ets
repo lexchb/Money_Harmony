@@ -12,8 +12,16 @@ export struct AddBillPage {
   @State note: string = '';
   @State categories: string[] = getCategories(BillType.EXPENSE);
 
+  private shouldRefresh: boolean = false;
+
   aboutToAppear(): void {
     this.categories = getCategories(this.billType);
+  }
+
+  aboutToDisappear(): void {
+    if (this.shouldRefresh) {
+      AppStorage.setOrCreate('needRefresh', (AppStorage.get<number>('needRefresh') ?? 0) + 1);
+    }
   }
 
   onTypeChange(type: BillType): void {
@@ -40,7 +48,7 @@ export struct AddBillPage {
     };
 
     await dbHelper.addBill(bill);
-    AppStorage.setOrCreate('needRefresh', (AppStorage.get<number>('needRefresh') ?? 0) + 1);
+    this.shouldRefresh = true;
     this.pageStack.pop();
   }
 

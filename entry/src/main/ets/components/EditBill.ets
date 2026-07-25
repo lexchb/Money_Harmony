@@ -14,11 +14,18 @@ export struct EditBillPage {
   @State categories: string[] = getCategories(BillType.EXPENSE);
 
   private billId: number = 0;
+  private shouldRefresh: boolean = false;
 
   aboutToAppear(): void {
     if (this.param && this.param['billId'] !== undefined) {
       this.billId = Number(this.param['billId']);
       this.loadBill(this.billId);
+    }
+  }
+
+  aboutToDisappear(): void {
+    if (this.shouldRefresh) {
+      AppStorage.setOrCreate('needRefresh', (AppStorage.get<number>('needRefresh') ?? 0) + 1);
     }
   }
 
@@ -60,7 +67,7 @@ export struct EditBillPage {
     };
 
     await dbHelper.updateBill(bill);
-    AppStorage.setOrCreate('needRefresh', (AppStorage.get<number>('needRefresh') ?? 0) + 1);
+    this.shouldRefresh = true;
     this.pageStack.pop();
   }
 
@@ -91,7 +98,7 @@ export struct EditBillPage {
         fontColor: '#e74c3c',
         action: async () => {
           await dbHelper.deleteBill(this.billId);
-          AppStorage.setOrCreate('needRefresh', (AppStorage.get<number>('needRefresh') ?? 0) + 1);
+          this.shouldRefresh = true;
           this.pageStack.pop();
         }
       }

@@ -195,7 +195,7 @@ struct Index {
                 .padding({ left: 16, right: 16, top: 12, bottom: 12 })
               }
               .onClick(() => this.goToEdit(bill))
-            }, (bill: Bill): string => String(bill.id ?? 0))
+            }, (bill: Bill): string => `${bill.id}_${bill.amount}_${bill.category}_${bill.note}_${bill.date}`)
           }
           .width('100%')
           .height('100%')
