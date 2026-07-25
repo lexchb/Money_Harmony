@@ -182,6 +182,10 @@ struct Index {
                         .fontColor('#999')
                         .margin({ top: 2 })
                     }
+                    Text(bill.date)
+                      .fontSize(12)
+                      .fontColor('#bbb')
+                      .margin({ top: 2 })
                   }
                   .alignItems(HorizontalAlign.Start)
                   .layoutWeight(1)
