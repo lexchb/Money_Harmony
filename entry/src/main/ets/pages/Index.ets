@@ -190,7 +190,9 @@ struct Index {
                   Circle()
                     .width(40)
                     .height(40)
-                    .fill(bill.type === BillType.EXPENSE ? '#e74c3c' : '#27ae60')
+                    .fill(Color.Transparent)
+                    .stroke(bill.type === BillType.EXPENSE ? '#e74c3c' : '#27ae60')
+                    .strokeWidth(8)
                     .margin({ right: 12 })
 
                   Column() {
