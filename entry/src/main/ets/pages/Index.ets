@@ -15,6 +15,8 @@ struct Index {
   @State totalIncome: number = 0;
   @State totalExpense: number = 0;
   @State currentMonth: string = todayString().substring(0, 7);
+  @State leftBtnFontSize: number = 40;
+  @State rightBtnFontSize: number = 40;
 
   private pageStack: NavPathStack = new NavPathStack();
 
@@ -80,12 +82,20 @@ struct Index {
           Row() {
             Button() {
               SymbolGlyph($r('sys.symbol.chevron_left'))
-                .fontSize(30)
+                .fontSize(this.leftBtnFontSize)
+                .animation({ duration: 400, curve: Curve.EaseOut })
                 .fontColor(['#007aff'])
             }
             .backgroundColor(Color.Transparent)
             .width(50)
             .height(50)
+            .onTouch((e: TouchEvent) => {
+              if (e.type === TouchType.Down) {
+                this.leftBtnFontSize = 10;
+              } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+                this.leftBtnFontSize = 40;
+              }
+            })
             .onClick(() => this.prevMonth())
             Text(this.currentMonth)
               .fontSize(18)
@@ -93,12 +103,20 @@ struct Index {
               .margin({ left: 12, right: 12 })
             Button() {
               SymbolGlyph($r('sys.symbol.chevron_right'))
-                .fontSize(30)
+                .fontSize(this.rightBtnFontSize)
+                .animation({ duration: 400, curve: Curve.EaseOut })
                 .fontColor(['#007aff'])
             }
             .backgroundColor(Color.Transparent)
             .width(50)
             .height(50)
+            .onTouch((e: TouchEvent) => {
+              if (e.type === TouchType.Down) {
+                this.rightBtnFontSize = 10;
+              } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+                this.rightBtnFontSize = 40;
+              }
+            })
             .onClick(() => this.nextMonth())
           }
           .justifyContent(FlexAlign.Center)
