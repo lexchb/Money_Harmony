@@ -123,7 +123,7 @@ export struct AddBillPage {
         // ===== 分类选择 =====
         Column() {
           Text('分类').fontSize(14).fontColor('#999').margin({ bottom: 8 })
-          Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween }) {
+          Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
             ForEach(this.categories, (cat: string) => {
               Button(cat)
                 .type(ButtonType.Capsule)
