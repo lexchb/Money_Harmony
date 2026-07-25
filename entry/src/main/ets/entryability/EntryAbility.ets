@@ -21,16 +21,21 @@ export default class EntryAbility extends UIAbility {
 
     dbHelper.init(this.context).then(() => {
       hilog.info(DOMAIN, 'testTag', 'Database initialized');
+      windowStage.loadContent('pages/Index', (err) => {
+        if (err.code) {
+          hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
+          return;
+        }
+        hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
+      });
     }).catch((e: Error) => {
       hilog.error(DOMAIN, 'testTag', 'Database init failed: %{public}s', e.message);
-    });
-
-    windowStage.loadContent('pages/Index', (err) => {
-      if (err.code) {
-        hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
-        return;
-      }
-      hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
+      // 数据库初始化失败也加载页面，此时页面查询会返回空数据
+      windowStage.loadContent('pages/Index', (err) => {
+        if (err.code) {
+          hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
+        }
+      });
     });
   }
 

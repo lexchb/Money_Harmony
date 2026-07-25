@@ -218,6 +218,7 @@ struct Index {
           .height('100%')
           .layoutWeight(1)
           .divider({ strokeWidth: 0.5, color: '#eee' })
+          .edgeEffect(EdgeEffect.Spring)
         }
 
         // ===== 添加按钮 =====
@@ -239,6 +240,8 @@ struct Index {
     }
     .width('100%')
     .height('100%')
+    .hideTitleBar(true)
+    .expandSafeArea()
     .navDestination(this.NavPages)
   }
 }
