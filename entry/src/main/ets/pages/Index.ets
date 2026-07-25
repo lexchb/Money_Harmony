@@ -17,6 +17,8 @@ struct Index {
   @State currentMonth: string = todayString().substring(0, 7);
   @State leftBtnFontSize: number = 40;
   @State rightBtnFontSize: number = 40;
+  @State isSelectMode: boolean = false;
+  @State selectedIds: Set<number> = new Set();
 
   private pageStack: NavPathStack = new NavPathStack();
 
@@ -29,6 +31,7 @@ struct Index {
   }
 
   async loadBills(): Promise<void> {
+    this.exitSelectMode();
     this.bills = await dbHelper.getBillsByMonth(this.currentMonth);
     const stats = await dbHelper.getMonthlyStats(this.currentMonth);
     this.totalIncome = stats.totalIncome;
@@ -57,6 +60,59 @@ struct Index {
     this.pageStack.pushPath({ name: 'AddBill' });
   }
 
+  enterSelectMode(bill: Bill): void {
+    this.isSelectMode = true;
+    const newSet = new Set<number>();
+    if (bill.id !== undefined) {
+      newSet.add(bill.id);
+    }
+    this.selectedIds = newSet;
+  }
+
+  toggleSelection(bill: Bill): void {
+    const newSet = new Set(this.selectedIds);
+    if (bill.id !== undefined) {
+      if (newSet.has(bill.id)) {
+        newSet.delete(bill.id);
+      } else {
+        newSet.add(bill.id);
+      }
+    }
+    this.selectedIds = newSet;
+  }
+
+  exitSelectMode(): void {
+    this.isSelectMode = false;
+    this.selectedIds = new Set();
+  }
+
+  confirmDelete(): void {
+    AlertDialog.show({
+      title: '确认删除',
+      message: `确定要删除选中的 ${this.selectedIds.size} 条账单记录吗？`,
+      primaryButton: {
+        value: '取消',
+        action: () => {}
+      },
+      secondaryButton: {
+        value: '删除',
+        fontColor: '#e74c3c',
+        action: async () => {
+          await this.deleteSelected();
+        }
+      }
+    });
+  }
+
+  async deleteSelected(): Promise<void> {
+    for (const id of this.selectedIds) {
+      await dbHelper.deleteBill(id);
+    }
+    this.exitSelectMode();
+    AppStorage.setOrCreate('needRefresh', (AppStorage.get<number>('needRefresh') ?? 0) + 1);
+    this.loadBills();
+  }
+
   goToEdit(bill: Bill): void {
     const editParam: EditBillParam = { billId: bill.id ?? 0 };
     this.pageStack.pushPath({
@@ -80,44 +136,101 @@ struct Index {
         // ===== 顶部月切换 + 汇总 =====
         Column() {
           Row() {
-            Button() {
-              SymbolGlyph($r('sys.symbol.chevron_left'))
-                .fontSize(this.leftBtnFontSize)
-                .animation({ duration: 400, curve: Curve.EaseOut })
-                .fontColor(['#007aff'])
-            }
-            .backgroundColor(Color.Transparent)
-            .width(50)
-            .height(50)
-            .onTouch((e: TouchEvent) => {
-              if (e.type === TouchType.Down) {
-                this.leftBtnFontSize = 10;
-              } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-                this.leftBtnFontSize = 40;
+            if (this.isSelectMode) {
+              // ===== 多选模式：取消 + 月份 + 已选数量 + 删除 =====
+              Button() { Text('取消').fontColor('#007aff') }
+                .backgroundColor(Color.Transparent)
+                .width(50)
+                .height(50)
+                .onClick(() => this.exitSelectMode())
+                .transition(
+                  TransitionEffect.translate({ x: -30 })
+                    .combine(TransitionEffect.opacity(0))
+                    .animation({ duration: 250, curve: Curve.EaseOut })
+                )
+
+              Text(this.currentMonth)
+                .fontSize(18)
+                .fontWeight(FontWeight.Bold)
+                .layoutWeight(1)
+                .textAlign(TextAlign.Center)
+
+              Text(`已选 ${this.selectedIds.size} 项`)
+                .fontSize(14)
+                .fontColor('#e74c3c')
+                .animation({ duration: 200 })
+                .margin({ right: 8 })
+                .transition(
+                  TransitionEffect.opacity(0)
+                    .animation({ duration: 200 })
+                )
+
+              Button() { Text('删除').fontColor('#e74c3c') }
+                .backgroundColor(Color.Transparent)
+                .opacity(this.selectedIds.size > 0 ? 1 : 0.4)
+                .animation({ duration: 200 })
+                .enabled(this.selectedIds.size > 0)
+                .width(50)
+                .height(50)
+                .onClick(() => this.confirmDelete())
+                .transition(
+                  TransitionEffect.translate({ x: 30 })
+                    .combine(TransitionEffect.opacity(0))
+                    .animation({ duration: 250, curve: Curve.EaseOut })
+                )
+            } else {
+              // ===== 普通模式：左箭头 + 月份 + 右箭头 =====
+              Button() {
+                SymbolGlyph($r('sys.symbol.chevron_left'))
+                  .fontSize(this.leftBtnFontSize)
+                  .animation({ duration: 400, curve: Curve.EaseOut })
+                  .fontColor(['#007aff'])
               }
-            })
-            .onClick(() => this.prevMonth())
-            Text(this.currentMonth)
-              .fontSize(18)
-              .fontWeight(FontWeight.Bold)
-              .margin({ left: 12, right: 12 })
-            Button() {
-              SymbolGlyph($r('sys.symbol.chevron_right'))
-                .fontSize(this.rightBtnFontSize)
-                .animation({ duration: 400, curve: Curve.EaseOut })
-                .fontColor(['#007aff'])
-            }
-            .backgroundColor(Color.Transparent)
-            .width(50)
-            .height(50)
-            .onTouch((e: TouchEvent) => {
-              if (e.type === TouchType.Down) {
-                this.rightBtnFontSize = 10;
-              } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-                this.rightBtnFontSize = 40;
+              .backgroundColor(Color.Transparent)
+              .width(50)
+              .height(50)
+              .onTouch((e: TouchEvent) => {
+                if (e.type === TouchType.Down) {
+                  this.leftBtnFontSize = 10;
+                } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+                  this.leftBtnFontSize = 40;
+                }
+              })
+              .onClick(() => this.prevMonth())
+              .transition(
+                TransitionEffect.translate({ x: -30 })
+                  .combine(TransitionEffect.opacity(0))
+                  .animation({ duration: 250, curve: Curve.EaseOut })
+              )
+
+              Text(this.currentMonth)
+                .fontSize(18)
+                .fontWeight(FontWeight.Bold)
+                .margin({ left: 12, right: 12 })
+
+              Button() {
+                SymbolGlyph($r('sys.symbol.chevron_right'))
+                  .fontSize(this.rightBtnFontSize)
+                  .animation({ duration: 400, curve: Curve.EaseOut })
+                  .fontColor(['#007aff'])
               }
-            })
-            .onClick(() => this.nextMonth())
+              .backgroundColor(Color.Transparent)
+              .width(50)
+              .height(50)
+              .onTouch((e: TouchEvent) => {
+                if (e.type === TouchType.Down) {
+                  this.rightBtnFontSize = 10;
+                } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+                  this.rightBtnFontSize = 40;
+                }
+              })
+              .onClick(() => this.nextMonth())
+              .transition(
+                TransitionEffect.translate({ x: 30 })
+                  .combine(TransitionEffect.opacity(0))
+                  .animation({ duration: 250, curve: Curve.EaseOut })
+              )
+            }
           }
           .justifyContent(FlexAlign.Center)
           .width('100%')
@@ -187,6 +300,27 @@ struct Index {
             ForEach(this.bills, (bill: Bill) => {
               ListItem() {
                 Row() {
+                  // ===== 多选模式复选框（左侧） =====
+                  Checkbox({ name: `cb_${bill.id}` })
+                    .select(this.selectedIds.has(bill.id!))
+                    .opacity(this.isSelectMode ? 1 : 0)
+                    .scale({ x: this.isSelectMode ? 1 : 0, y: this.isSelectMode ? 1 : 0 })
+                    .width(this.isSelectMode ? 24 : 0)
+                    .height(this.isSelectMode ? 24 : 0)
+                    .margin({ right: this.isSelectMode ? 8 : 0 })
+                    .animation({ duration: 200, curve: Curve.EaseOut })
+                    .onChange((v: boolean) => {
+                      const newSet = new Set(this.selectedIds);
+                      if (bill.id !== undefined) {
+                        if (v) {
+                          newSet.add(bill.id);
+                        } else {
+                          newSet.delete(bill.id);
+                        }
+                      }
+                      this.selectedIds = newSet;
+                    })
+
                   Circle()
                     .width(40)
                     .height(40)
@@ -194,6 +328,7 @@ struct Index {
                     .stroke(bill.type === BillType.EXPENSE ? '#e74c3c' : '#27ae60')
                     .strokeWidth(8)
                     .margin({ right: 12 })
+                    .animation({ duration: 300, curve: Curve.FastOutSlowIn })
 
                   Column() {
                     Text(bill.category)
@@ -219,9 +354,8 @@ struct Index {
                     .fontColor(bill.type === BillType.EXPENSE ? '#e74c3c' : '#27ae60')
                 }
                 .width('100%')
-                .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+                .padding({ left: 12, right: 16, top: 12, bottom: 12 })
               }
-              .onClick(() => this.goToEdit(bill))
               .transition(
                 TransitionEffect.asymmetric(
                   TransitionEffect.translate({ y: 30 })
@@ -230,6 +364,24 @@ struct Index {
                   TransitionEffect.translate({ x: -30 })
                     .combine(TransitionEffect.opacity(0))
                     .animation({ duration: 200 })
+                )
+              )
+              .gesture(
+                GestureGroup(GestureMode.Exclusive,
+                  LongPressGesture({ duration: 500 })
+                    .onAction(() => {
+                      if (!this.isSelectMode) {
+                        this.enterSelectMode(bill);
+                      }
+                    }),
+                  TapGesture({})
+                    .onAction(() => {
+                      if (this.isSelectMode) {
+                        this.toggleSelection(bill);
+                      } else {
+                        this.goToEdit(bill);
+                      }
+                    })
                 )
               )
             }, (bill: Bill): string => `${bill.id}_${bill.amount}_${bill.category}_${bill.note}_${bill.date}`)
