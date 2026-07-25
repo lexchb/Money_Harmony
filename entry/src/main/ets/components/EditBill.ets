@@ -49,7 +49,7 @@ export struct EditBillPage {
   }
 
   async saveBill(): Promise<void> {
-    const amountNum = parseFloat(this.amount);
+    const amountNum = Math.round(parseFloat(this.amount) * 100) / 100;
     if (isNaN(amountNum) || amountNum <= 0) {
       return;
     }
@@ -151,7 +151,7 @@ export struct EditBillPage {
             .fontSize(28)
             .fontWeight(FontWeight.Bold)
           TextInput({ placeholder: '0.00', text: this.amount })
-            .type(InputType.Number)
+            .type(InputType.NUMBER_DECIMAL)
             .fontSize(28)
             .fontWeight(FontWeight.Bold)
             .height(48)
