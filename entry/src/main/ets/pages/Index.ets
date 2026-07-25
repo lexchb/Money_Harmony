@@ -3,6 +3,10 @@ import { Bill, BillType, formatMoney, todayString } from '../model/Bill';
 import { dbHelper } from '../model/DatabaseHelper';
 import { AddBillPage } from '../components/AddBill';
 
+interface EditBillParam {
+  billId: number;
+}
+
 @Entry
 @Component
 struct Index {
@@ -52,9 +56,10 @@ struct Index {
   }
 
   goToEdit(bill: Bill): void {
+    const editParam: EditBillParam = { billId: bill.id ?? 0 };
     this.pageStack.pushPath({
       name: 'AddBill',
-      param: { billId: bill.id }
+      param: editParam
     });
   }
 
@@ -214,6 +219,6 @@ struct Index {
       .backgroundColor(Color.White)
     }
     .navDestination(this.NavPages)
-    .hideNavBar()
+    .hideNavBar(true)
   }
 }

@@ -4,8 +4,8 @@ import { dbHelper } from '../model/DatabaseHelper';
 
 @Component
 export struct AddBillPage {
-  private pageStack: MultiNavPathStack = new MultiNavPathStack();
-  private param: Record<string, Object> = {};
+  pageStack: MultiNavPathStack = new MultiNavPathStack();
+  param: Record<string, Object> = {};
 
   @State amount: string = '';
   @State billType: BillType = BillType.EXPENSE;
