@@ -1,7 +1,7 @@
-import { MultiNavPathStack } from '@kit.ArkUI';
 import { Bill, BillType, formatMoney, todayString } from '../model/Bill';
 import { dbHelper } from '../model/DatabaseHelper';
 import { AddBillPage } from '../components/AddBill';
+import { EditBillPage } from '../components/EditBill';
 
 interface EditBillParam {
   billId: number;
@@ -16,7 +16,7 @@ struct Index {
   @State totalExpense: number = 0;
   @State currentMonth: string = todayString().substring(0, 7);
 
-  private pageStack: MultiNavPathStack = new MultiNavPathStack();
+  private pageStack: NavPathStack = new NavPathStack();
 
   aboutToAppear(): void {
     this.loadBills();
@@ -58,7 +58,7 @@ struct Index {
   goToEdit(bill: Bill): void {
     const editParam: EditBillParam = { billId: bill.id ?? 0 };
     this.pageStack.pushPath({
-      name: 'AddBill',
+      name: 'EditBill',
       param: editParam
     });
   }
@@ -66,7 +66,9 @@ struct Index {
   @Builder
   NavPages(name: string, param?: Object) {
     if (name === 'AddBill') {
-      AddBillPage({ pageStack: this.pageStack, param: param as Record<string, Object> });
+      AddBillPage({ pageStack: this.pageStack });
+    } else if (name === 'EditBill') {
+      EditBillPage({ pageStack: this.pageStack, param: param as Record<string, Object> });
     }
   }
 
@@ -218,7 +220,8 @@ struct Index {
       .height('100%')
       .backgroundColor(Color.White)
     }
+    .width('100%')
+    .height('100%')
     .navDestination(this.NavPages)
-    .hideNavBar(true)
   }
 }

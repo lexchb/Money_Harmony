@@ -1,19 +1,38 @@
-import { Bill, BillType, getCategories, todayString } from '../model/Bill';
+import { Bill, BillType, getCategories } from '../model/Bill';
 import { dbHelper } from '../model/DatabaseHelper';
 
 @Component
-export struct AddBillPage {
+export struct EditBillPage {
   pageStack: NavPathStack = new NavPathStack();
+  param: Record<string, Object> = {};
 
   @State amount: string = '';
   @State billType: BillType = BillType.EXPENSE;
   @State category: string = '';
-  @State date: string = todayString();
+  @State date: string = '';
   @State note: string = '';
   @State categories: string[] = getCategories(BillType.EXPENSE);
 
+  private billId: number = 0;
+
   aboutToAppear(): void {
-    this.categories = getCategories(this.billType);
+    if (this.param && this.param['billId'] !== undefined) {
+      this.billId = Number(this.param['billId']);
+      this.loadBill(this.billId);
+    }
+  }
+
+  async loadBill(id: number): Promise<void> {
+    const all = await dbHelper.getAllBills();
+    const bill = all.find(b => b.id === Number(id));
+    if (bill) {
+      this.amount = String(bill.amount);
+      this.billType = bill.type;
+      this.category = bill.category;
+      this.date = bill.date;
+      this.note = bill.note;
+      this.categories = getCategories(bill.type);
+    }
   }
 
   onTypeChange(type: BillType): void {
@@ -32,6 +51,7 @@ export struct AddBillPage {
     }
 
     const bill: Bill = {
+      id: this.billId,
       amount: amountNum,
       type: this.billType,
       category: this.category,
@@ -39,7 +59,7 @@ export struct AddBillPage {
       note: this.note,
     };
 
-    await dbHelper.addBill(bill);
+    await dbHelper.updateBill(bill);
     AppStorage.setOrCreate('needRefresh', (AppStorage.get<number>('needRefresh') ?? 0) + 1);
     this.pageStack.pop();
   }
@@ -58,6 +78,26 @@ export struct AddBillPage {
     });
   }
 
+  deleteBill(): void {
+    AlertDialog.show({
+      title: '确认删除',
+      message: '确定要删除这条账单记录吗？',
+      primaryButton: {
+        value: '取消',
+        action: () => {}
+      },
+      secondaryButton: {
+        value: '删除',
+        fontColor: '#e74c3c',
+        action: async () => {
+          await dbHelper.deleteBill(this.billId);
+          AppStorage.setOrCreate('needRefresh', (AppStorage.get<number>('needRefresh') ?? 0) + 1);
+          this.pageStack.pop();
+        }
+      }
+    });
+  }
+
   build() {
     NavDestination() {
       Column() {
@@ -67,13 +107,15 @@ export struct AddBillPage {
             .backgroundColor(Color.Transparent)
             .onClick(() => this.pageStack.pop())
 
-          Text('添加账单')
+          Text('编辑账单')
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
             .layoutWeight(1)
             .textAlign(TextAlign.Center)
 
-          Blank().width(50)
+          Button() { Text('删除').fontColor('#e74c3c') }
+            .backgroundColor(Color.Transparent)
+            .onClick(() => this.deleteBill())
         }
         .width('100%')
         .padding({ left: 12, right: 12, top: 12, bottom: 12 })
@@ -154,7 +196,7 @@ export struct AddBillPage {
         .border({ width: { bottom: 0.5 }, color: { bottom: '#eee' } })
 
         // ===== 保存按钮 =====
-        Button('保存')
+        Button('保存修改')
           .type(ButtonType.Capsule)
           .width('90%')
           .height(48)
