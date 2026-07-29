@@ -334,28 +334,30 @@ struct Index {
                 ListItem() {
                   Row() {
                     // ===== 多选模式复选框（左侧） =====
-                    Checkbox({ name: `cb_${bill.id}` })
-                      .select(this.selectedIds.indexOf(bill.id!) >= 0)
-                      .opacity(this.isSelectMode ? 1 : 0)
-                      .scale({ x: this.isSelectMode ? 1 : 0, y: this.isSelectMode ? 1 : 0 })
-                      .width(this.isSelectMode ? 24 : 0)
-                      .height(this.isSelectMode ? 24 : 0)
-                      .margin({ right: this.isSelectMode ? 8 : 0 })
-                      .animation({ duration: 200, curve: Curve.EaseOut })
-                      .onChange((v: boolean) => {
-                        const newIds: number[] = [...this.selectedIds];
-                        if (bill.id !== undefined) {
-                          if (v) {
-                            newIds.push(bill.id);
-                          } else {
-                            const idx = newIds.indexOf(bill.id);
-                            if (idx >= 0) {
-                              newIds.splice(idx, 1);
+                    if (this.isSelectMode) {
+                      Checkbox({ name: `cb_${bill.id}` })
+                        .select(this.selectedIds.indexOf(bill.id!) >= 0)
+                        .margin({ right: 8 })
+                        .onChange((v: boolean) => {
+                          const newIds: number[] = [...this.selectedIds];
+                          if (bill.id !== undefined) {
+                            if (v) {
+                              newIds.push(bill.id);
+                            } else {
+                              const idx = newIds.indexOf(bill.id);
+                              if (idx >= 0) {
+                                newIds.splice(idx, 1);
+                              }
                             }
                           }
-                        }
-                        this.selectedIds = newIds;
-                      })
+                          this.selectedIds = newIds;
+                        })
+                        .transition(
+                          TransitionEffect.translate({ x: -20 })
+                            .combine(TransitionEffect.opacity(0))
+                            .animation({ duration: 200, curve: Curve.EaseOut })
+                        )
+                    }
 
                     Circle()
                       .width(40)
@@ -364,7 +366,6 @@ struct Index {
                       .stroke(bill.type === BillType.EXPENSE ? '#e74c3c' : '#27ae60')
                       .strokeWidth(6)
                       .margin({ right: 12 })
-                      .animation({ duration: 300, curve: Curve.FastOutSlowIn })
 
                     Column() {
                       Text(bill.category)
