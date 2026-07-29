@@ -45,3 +45,38 @@ export interface CategorySpent {
   category: string;
   amount: number;
 }
+
+export interface ScheduledTask {
+  id?: number;
+  type: BillType;
+  amount: number;
+  category: string;
+  startTime: number;         // 首次执行时间戳(ms)
+  intervalType: string;      // 'day' | 'week' | 'month' | 'quarter' | 'year'
+  note: string;
+  lastExecuted?: number;     // 上次执行时间戳(ms)
+  isActive: boolean;
+  createTime?: number;
+}
+
+export function nextExecutionTime(last: number, intervalType: string): number {
+  const d = new Date(last);
+  switch (intervalType) {
+    case 'day':
+      d.setDate(d.getDate() + 1);
+      break;
+    case 'week':
+      d.setDate(d.getDate() + 7);
+      break;
+    case 'month':
+      d.setMonth(d.getMonth() + 1);
+      break;
+    case 'quarter':
+      d.setMonth(d.getMonth() + 3);
+      break;
+    case 'year':
+      d.setFullYear(d.getFullYear() + 1);
+      break;
+  }
+  return d.getTime();
+}

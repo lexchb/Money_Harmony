@@ -3,6 +3,7 @@ import { dbHelper } from '../model/DatabaseHelper';
 import { AddBillPage } from '../components/AddBill';
 import { EditBillPage } from '../components/EditBill';
 import { PlanContent } from '../components/Plan';
+import { AddScheduledTaskDialog } from '../components/AddScheduledTaskDialog';
 
 interface EditBillParam {
   billId: number;
@@ -23,9 +24,43 @@ struct Index {
   @State activeTab: number = 0;
 
   private pageStack: NavPathStack = new NavPathStack();
+  private scheduledTaskDialog: CustomDialogController = new CustomDialogController({
+    builder: AddScheduledTaskDialog({
+      onConfirm: () => {
+        // 定时任务创建后刷新计划数据
+        AppStorage.setOrCreate('planNeedRefresh', (AppStorage.get<number>('planNeedRefresh') ?? 0) + 1);
+      }
+    }),
+    autoCancel: true,
+    alignment: DialogAlignment.Bottom,
+    offset: { dx: 0, dy: 0 },
+  });
+  private scheduledTaskTimer: number = -1;
+  private readonly SCHEDULED_TASK_INTERVAL = 60000; // 每60秒检查一次
 
   aboutToAppear(): void {
     this.loadBills();
+    // 启动定时任务检查
+    this.checkScheduledTasks();
+    this.scheduledTaskTimer = setInterval(() => {
+      this.checkScheduledTasks();
+    }, this.SCHEDULED_TASK_INTERVAL);
+  }
+
+  aboutToDisappear(): void {
+    if (this.scheduledTaskTimer >= 0) {
+      clearInterval(this.scheduledTaskTimer);
+      this.scheduledTaskTimer = -1;
+    }
+  }
+
+  async checkScheduledTasks(): Promise<void> {
+    const count = await dbHelper.executeDueScheduledTasks();
+    if (count > 0) {
+      // 有账单被自动创建，刷新数据
+      AppStorage.setOrCreate('needRefresh', (AppStorage.get<number>('needRefresh') ?? 0) + 1);
+      this.loadBills();
+    }
   }
 
   onRefresh(): void {
@@ -124,46 +159,6 @@ struct Index {
     });
   }
 
-  showAddPlanDialog(): void {
-    AlertDialog.show({
-      title: '添加计划',
-      message: '选择计划类型',
-      primaryButton: {
-        value: '支出计划',
-        action: () => this.showAddPlanAmountSetting(BillType.EXPENSE)
-      },
-      secondaryButton: {
-        value: '收入计划',
-        action: () => this.showAddPlanAmountSetting(BillType.INCOME)
-      }
-    });
-  }
-
-  showAddPlanAmountSetting(type: BillType): void {
-    AlertDialog.show({
-      title: type === BillType.EXPENSE ? '支出目标' : '收入目标',
-      message: '选择目标金额',
-      primaryButton: {
-        value: '¥500',
-        action: () => this.createPlan(type, 500)
-      },
-      secondaryButton: {
-        value: '¥1000',
-        action: () => this.createPlan(type, 1000)
-      }
-    });
-  }
-
-  async createPlan(type: BillType, targetAmount: number): Promise<void> {
-    await dbHelper.addPlan({
-      type: type,
-      category: '',
-      targetAmount: targetAmount,
-      month: this.currentMonth
-    });
-    AppStorage.setOrCreate('planNeedRefresh', (AppStorage.get<number>('planNeedRefresh') ?? 0) + 1);
-  }
-
   @Builder
   NavPages(name: string, param?: Object) {
     if (name === 'AddBill') {
@@ -213,7 +208,7 @@ struct Index {
               .fontSize(14)
               .height(36)
               .padding({ left: 16, right: 16 })
-              .onClick(() => { this.showAddPlanDialog(); })
+              .onClick(() => { this.scheduledTaskDialog.open(); })
           }
           .width('100%')
           .padding({ left: 20, right: 20, top: 24, bottom: 12 })
