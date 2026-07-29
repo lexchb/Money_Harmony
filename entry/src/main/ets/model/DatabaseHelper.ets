@@ -1,6 +1,6 @@
 import { relationalStore } from '@kit.ArkData';
 import { Context } from '@kit.AbilityKit';
-import { Bill, BillType, Plan } from './Bill';
+import { Bill, BillType, Plan, CategorySpent } from './Bill';
 
 const DB_NAME = 'MoneyHarmony.db';
 const TABLE_NAME = 'bills';
@@ -218,7 +218,7 @@ class DatabaseHelper {
     return this.store.delete(predicates);
   }
 
-  async getCategorySpent(month: string, type: BillType): Promise<{ category: string; amount: number }[]> {
+  async getCategorySpent(month: string, type: BillType): Promise<CategorySpent[]> {
     if (!this.store) {
       return [];
     }
@@ -227,7 +227,7 @@ class DatabaseHelper {
       WHERE date LIKE ? AND type = ?
       GROUP BY category`;
     const resultSet = await this.store.querySql(sql, [`${month}%`, type]);
-    const result: { category: string; amount: number }[] = [];
+    const result: CategorySpent[] = [];
     while (resultSet.goToNextRow()) {
       result.push({
         category: resultSet.getString(resultSet.getColumnIndex('category')),

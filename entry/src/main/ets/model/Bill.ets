@@ -40,3 +40,8 @@ export interface Plan {
   targetAmount: number;
   month: string;
 }
+
+export interface CategorySpent {
+  category: string;
+  amount: number;
+}
