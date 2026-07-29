@@ -205,7 +205,7 @@ struct Index {
                 Button() {
                   SymbolGlyph($r('sys.symbol.chevron_left'))
                     .fontSize(this.leftBtnFontSize)
-                    .animation({ duration: 400, curve: Curve.EaseOut })
+                    .animation({ duration: 150, curve: Curve.EaseOut })
                     .fontColor(['#007aff'])
                 }
                 .backgroundColor(Color.Transparent)
@@ -213,7 +213,7 @@ struct Index {
                 .height(50)
                 .onTouch((e: TouchEvent) => {
                   if (e.type === TouchType.Down) {
-                    this.leftBtnFontSize = 10;
+                    this.leftBtnFontSize = 30;
                   } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
                     this.leftBtnFontSize = 40;
                   }
@@ -233,7 +233,7 @@ struct Index {
                 Button() {
                   SymbolGlyph($r('sys.symbol.chevron_right'))
                     .fontSize(this.rightBtnFontSize)
-                    .animation({ duration: 400, curve: Curve.EaseOut })
+                    .animation({ duration: 150, curve: Curve.EaseOut })
                     .fontColor(['#007aff'])
                 }
                 .backgroundColor(Color.Transparent)
@@ -241,7 +241,7 @@ struct Index {
                 .height(50)
                 .onTouch((e: TouchEvent) => {
                   if (e.type === TouchType.Down) {
-                    this.rightBtnFontSize = 10;
+                    this.rightBtnFontSize = 30;
                   } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
                     this.rightBtnFontSize = 40;
                   }
