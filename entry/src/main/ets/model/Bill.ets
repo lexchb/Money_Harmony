@@ -32,3 +32,11 @@ export function todayString(): string {
   const d = String(now.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 }
+
+export interface Plan {
+  id?: number;
+  type: BillType;
+  category: string;
+  targetAmount: number;
+  month: string;
+}

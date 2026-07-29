@@ -2,6 +2,7 @@ import { Bill, BillType, formatMoney, todayString } from '../model/Bill';
 import { dbHelper } from '../model/DatabaseHelper';
 import { AddBillPage } from '../components/AddBill';
 import { EditBillPage } from '../components/EditBill';
+import { PlanPage } from '../components/Plan';
 
 interface EditBillParam {
   billId: number;
@@ -58,6 +59,10 @@ struct Index {
 
   goToAdd(): void {
     this.pageStack.pushPath({ name: 'AddBill' });
+  }
+
+  goToPlan(): void {
+    this.pageStack.pushPath({ name: 'Plan' });
   }
 
   enterSelectMode(bill: Bill): void {
@@ -128,6 +133,8 @@ struct Index {
       AddBillPage({ pageStack: this.pageStack });
     } else if (name === 'EditBill') {
       EditBillPage({ pageStack: this.pageStack, param: param as Record<string, Object> });
+    } else if (name === 'Plan') {
+      PlanPage({ pageStack: this.pageStack });
     }
   }
 
@@ -468,18 +475,19 @@ struct Index {
           .layoutWeight(1)
           .alignItems(HorizontalAlign.Center)
 
-          // 预算
+          // 计划
           Column() {
             SymbolGlyph($r('sys.symbol.wallet'))
               .fontSize(22)
               .fontColor(['#999'])
-            Text('预算')
+            Text('计划')
               .fontSize(10)
               .fontColor('#999')
               .margin({ top: 2 })
           }
           .layoutWeight(1)
           .alignItems(HorizontalAlign.Center)
+          .onClick(() => this.goToPlan())
 
           // 我的
           Column() {
