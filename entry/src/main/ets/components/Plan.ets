@@ -12,6 +12,7 @@ export struct PlanContent {
   @State currentMonth: string = todayString().substring(0, 7);
   @State totalTarget: number = 0;
   @State totalSpent: number = 0;
+  @StorageLink('planNeedRefresh') planNeedRefresh: number = 0;
 
   aboutToAppear(): void {
     this.loadPlans();
@@ -181,7 +182,7 @@ export struct PlanContent {
           Text('暂无计划')
             .fontSize(16)
             .fontColor('#ccc')
-          Text('点击右上角 + 添加计划')
+          Text('点击右上角 添加计划')
             .fontSize(14)
             .fontColor('#ddd')
             .margin({ top: 8 })
