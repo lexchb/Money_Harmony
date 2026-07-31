@@ -459,6 +459,7 @@ struct Index {
                   .borderRadius(32)
                   .backgroundColor(Color.White)
                   .shadow({ radius: 4, color: 'rgba(0,0,0,0.03)', offsetY: 1 })
+                  .margin({ bottom: 8 })
                   .transition(
                     TransitionEffect.asymmetric(
                       TransitionEffect.translate({ y: 30 })
