@@ -180,6 +180,7 @@ export struct AddScheduledTaskDialog {
                   // 日期选定后弹出时间选择器
                   TimePickerDialog.show({
                     selected: this.selectedDate,
+                    useMilitaryTime: true,   // 24小时制，不区分上午/下午
                     offset: { dx: 0, dy: 0 },
                     onAccept: (time: TimePickerResult) => {
                       // 合并：使用新选择的时间，保留已选日期
