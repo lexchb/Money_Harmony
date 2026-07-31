@@ -1,17 +1,33 @@
-import { BillType, formatMoney, todayString, Plan } from '../model/Bill';
+import { BillType, formatMoney, ScheduledTask } from '../model/Bill';
 import { dbHelper } from '../model/DatabaseHelper';
 
-interface PlanWithSpent extends Plan {
-  spent: number;
-  progress: number;
+function intervalLabel(intervalType: string): string {
+  switch (intervalType) {
+    case 'day':
+      return '每天';
+    case 'week':
+      return '每周';
+    case 'month':
+      return '每月';
+    case 'quarter':
+      return '每季度';
+    case 'year':
+      return '每年';
+    default:
+      return intervalType;
+  }
+}
+
+function formatDateTime(ts: number): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 @Component
 export struct PlanContent {
-  @State plans: PlanWithSpent[] = [];
-  @State currentMonth: string = todayString().substring(0, 7);
-  @State totalTarget: number = 0;
-  @State totalSpent: number = 0;
+  @State tasks: ScheduledTask[] = [];
+  @State expensePlanCount: number = 0;
+  @State incomePlanCount: number = 0;
   @StorageLink('planNeedRefresh') planNeedRefresh: number = 0;
 
   aboutToAppear(): void {
@@ -19,96 +35,27 @@ export struct PlanContent {
   }
 
   async loadPlans(): Promise<void> {
-    const rawPlans = await dbHelper.getPlansByMonth(this.currentMonth);
-    const expenseSpent = await dbHelper.getCategorySpent(this.currentMonth, BillType.EXPENSE);
-    const incomeSpent = await dbHelper.getCategorySpent(this.currentMonth, BillType.INCOME);
+    // 加载数据库中所有已设置的定时任务（不限月份）
+    const allTasks = await dbHelper.getAllScheduledTasks();
+    this.tasks = allTasks;
 
-    const planWithSpent: PlanWithSpent[] = [];
-    let totalTarget = 0;
-    let totalSpent = 0;
-
-    for (const plan of rawPlans) {
-      let spentAmount = 0;
-      if (plan.category === '') {
-        const spentList = plan.type === BillType.EXPENSE ? expenseSpent : incomeSpent;
-        spentAmount = 0;
-        for (const item of spentList) {
-          spentAmount += item.amount;
-        }
+    let expenseCount = 0;
+    let incomeCount = 0;
+    for (const task of allTasks) {
+      if (task.type === BillType.EXPENSE) {
+        expenseCount++;
       } else {
-        const spentList = plan.type === BillType.EXPENSE ? expenseSpent : incomeSpent;
-        spentAmount = 0;
-        for (const item of spentList) {
-          if (item.category === plan.category) {
-            spentAmount = item.amount;
-            break;
-          }
-        }
+        incomeCount++;
       }
-
-      totalTarget += plan.targetAmount;
-      totalSpent += spentAmount;
-
-      planWithSpent.push({
-        id: plan.id,
-        type: plan.type,
-        category: plan.category,
-        targetAmount: plan.targetAmount,
-        month: plan.month,
-        spent: spentAmount,
-        progress: plan.targetAmount > 0 ? Math.min(spentAmount / plan.targetAmount, 1) : 0,
-      });
     }
-
-    this.plans = planWithSpent;
-    this.totalTarget = totalTarget;
-    this.totalSpent = totalSpent;
+    this.expensePlanCount = expenseCount;
+    this.incomePlanCount = incomeCount;
   }
 
-  showAddPlanDialog(): void {
-    AlertDialog.show({
-      title: '添加计划',
-      message: '选择计划类型',
-      primaryButton: {
-        value: '支出计划',
-        action: () => this.showAmountSetting(BillType.EXPENSE)
-      },
-      secondaryButton: {
-        value: '收入计划',
-        action: () => this.showAmountSetting(BillType.INCOME)
-      }
-    });
-  }
-
-  showAmountSetting(type: BillType): void {
-    AlertDialog.show({
-      title: type === BillType.EXPENSE ? '支出目标' : '收入目标',
-      message: '选择目标金额',
-      primaryButton: {
-        value: '¥500',
-        action: () => this.createPlan(type, 500)
-      },
-      secondaryButton: {
-        value: '¥1000',
-        action: () => this.createPlan(type, 1000)
-      }
-    });
-  }
-
-  async createPlan(type: BillType, targetAmount: number): Promise<void> {
-    await dbHelper.addPlan({
-      type: type,
-      category: '',
-      targetAmount: targetAmount,
-      month: this.currentMonth
-    });
-    this.loadPlans();
-  }
-
-  showDeleteConfirm(plan: PlanWithSpent): void {
+  showDeleteConfirm(task: ScheduledTask): void {
     AlertDialog.show({
       title: '删除计划',
-      message: '确定要删除这个计划吗？',
+      message: '确定要删除这个定时计划吗？',
       primaryButton: {
         value: '取消',
         action: () => {}
@@ -117,8 +64,8 @@ export struct PlanContent {
         value: '删除',
         fontColor: '#e74c3c',
         action: async () => {
-          if (plan.id !== undefined) {
-            await dbHelper.deletePlan(plan.id);
+          if (task.id !== undefined) {
+            await dbHelper.deleteScheduledTask(task.id);
             this.loadPlans();
           }
         }
@@ -131,36 +78,23 @@ export struct PlanContent {
       // ===== 概述卡片 =====
       Row() {
         Column() {
-          Text(this.totalTarget > 0 ? '计划总额' : '暂无计划')
+          Text('支出计划')
             .fontSize(13)
             .fontColor('#999')
-          Text(`¥${formatMoney(this.totalTarget)}`)
+          Text(`${this.expensePlanCount} 个`)
             .fontSize(20)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#333')
+            .fontColor('#e74c3c')
             .animation({ duration: 300, curve: Curve.EaseInOut })
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Center)
 
         Column() {
-          Text('已使用')
+          Text('收入计划')
             .fontSize(13)
             .fontColor('#999')
-          Text(`¥${formatMoney(this.totalSpent)}`)
-            .fontSize(20)
-            .fontWeight(FontWeight.Bold)
-            .fontColor('#007aff')
-            .animation({ duration: 300, curve: Curve.EaseInOut })
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Center)
-
-        Column() {
-          Text('剩余')
-            .fontSize(13)
-            .fontColor('#999')
-          Text(`¥${formatMoney(Math.max(this.totalTarget - this.totalSpent, 0))}`)
+          Text(`${this.incomePlanCount} 个`)
             .fontSize(20)
             .fontWeight(FontWeight.Bold)
             .fontColor('#27ae60')
@@ -177,7 +111,7 @@ export struct PlanContent {
       .margin({ left: 16, right: 16, top: 8, bottom: 16 })
 
       // ===== 列表 =====
-      if (this.plans.length === 0) {
+      if (this.tasks.length === 0) {
         Column() {
           Text('暂无计划')
             .fontSize(16)
@@ -191,21 +125,21 @@ export struct PlanContent {
         .justifyContent(FlexAlign.Center)
       } else {
         List() {
-          ForEach(this.plans, (plan: PlanWithSpent) => {
+          ForEach(this.tasks, (task: ScheduledTask) => {
             ListItem() {
               Column() {
                 Row() {
                   Circle()
                     .width(40)
                     .height(40)
-                    .fill(plan.type === BillType.EXPENSE ? '#e74c3c' : '#27ae60')
+                    .fill(task.type === BillType.EXPENSE ? '#e74c3c' : '#27ae60')
                     .margin({ right: 12 })
 
                   Column() {
-                    Text(plan.category || '全部')
+                    Text(task.category)
                       .fontSize(16)
                       .fontWeight(FontWeight.Medium)
-                    Text(plan.type === BillType.EXPENSE ? '支出' : '收入')
+                    Text(`${task.type === BillType.EXPENSE ? '支出' : '收入'} · ${intervalLabel(task.intervalType)}`)
                       .fontSize(12)
                       .fontColor('#999')
                       .margin({ top: 2 })
@@ -213,48 +147,20 @@ export struct PlanContent {
                   .alignItems(HorizontalAlign.Start)
                   .layoutWeight(1)
 
-                  Text(`¥${formatMoney(plan.targetAmount)}`)
+                  Text(`¥${formatMoney(task.amount)}`)
                     .fontSize(18)
                     .fontWeight(FontWeight.Bold)
-                    .fontColor(plan.type === BillType.EXPENSE ? '#e74c3c' : '#27ae60')
+                    .fontColor(task.type === BillType.EXPENSE ? '#e74c3c' : '#27ae60')
                 }
                 .width('100%')
                 .padding({ bottom: 8 })
 
-                // 进度条
-                Stack() {
-                  Row()
-                    .width('100%')
-                    .height(6)
-                    .backgroundColor('#f0f0f0')
-                    .borderRadius(3)
-
-                  Row()
-                    .width(`${plan.progress * 100}%`)
-                    .height(6)
-                    .backgroundColor(plan.type === BillType.EXPENSE
-                      ? (plan.progress >= 1 ? '#e74c3c' : '#ff9800')
-                      : '#27ae60')
-                    .borderRadius(3)
-                    .alignSelf(ItemAlign.Start)
-                    .animation({ duration: 300, curve: Curve.EaseOut })
-                }
-                .width('100%')
-                .height(6)
-
-                // 进度文字
                 Row() {
-                  Text(`已 ${plan.type === BillType.EXPENSE ? '支出' : '收入'} ¥${formatMoney(plan.spent)}`)
+                  Text(`开始 ${formatDateTime(task.startTime)}`)
                     .fontSize(12)
-                    .fontColor('#999')
-                  Blank()
-                  Text(`${Math.round(plan.progress * 100)}%`)
-                    .fontSize(12)
-                    .fontColor(plan.progress >= 1 ? '#e74c3c' : '#ff9800')
-                    .fontWeight(FontWeight.Bold)
+                    .fontColor('#bbb')
                 }
                 .width('100%')
-                .padding({ top: 4 })
               }
               .width('100%')
               .padding({ left: 16, right: 16, top: 14, bottom: 14 })
@@ -267,13 +173,13 @@ export struct PlanContent {
               GestureGroup(GestureMode.Exclusive,
                 LongPressGesture({ duration: 500 })
                   .onAction(() => {
-                    this.showDeleteConfirm(plan);
+                    this.showDeleteConfirm(task);
                   }),
                 TapGesture({})
                   .onAction(() => {})
               )
             )
-          }, (plan: PlanWithSpent): string => `${plan.id}_${plan.category}_${plan.targetAmount}`)
+          }, (task: ScheduledTask): string => `${task.id}_${task.amount}_${task.category}_${task.intervalType}_${task.startTime}`)
         }
         .width('100%')
         .height('100%')

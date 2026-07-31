@@ -13,7 +13,7 @@ export interface Bill {
   createTime?: number;
 }
 
-export const EXPENSE_CATEGORIES: string[] = ['餐饮', '购物', '交通', '娱乐', '医疗', '教育', '日用品', '其他'];
+export const EXPENSE_CATEGORIES: string[] = ['餐饮', '购物', '交通', '娱乐', '医疗', '教育', '理财', '其他'];
 
 export const INCOME_CATEGORIES: string[] = ['工资', '奖金', '理财', '兼职', '红包', '其他'];
 
