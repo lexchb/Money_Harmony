@@ -1,4 +1,4 @@
-import { BillType, getCategories, ScheduledTask, Plan, todayString } from '../model/Bill';
+import { BillType, getCategories, ScheduledTask } from '../model/Bill';
 import { dbHelper } from '../model/DatabaseHelper';
 
 interface IntervalOption {
@@ -76,15 +76,6 @@ export struct AddScheduledTaskDialog {
     } else {
       // 新增模式：保存定时任务
       await dbHelper.addScheduledTask(task);
-
-      // 同步添加到计划列表
-      const plan: Plan = {
-        type: this.selectedType,
-        category: this.selectedCategory,
-        targetAmount: amount,
-        month: todayString().substring(0, 7),
-      };
-      await dbHelper.addPlan(plan);
     }
 
     this.controller.close();

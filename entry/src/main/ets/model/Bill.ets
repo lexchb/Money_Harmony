@@ -33,14 +33,6 @@ export function todayString(): string {
   return `${y}-${m}-${d}`;
 }
 
-export interface Plan {
-  id?: number;
-  type: BillType;
-  category: string;
-  targetAmount: number;
-  month: string;
-}
-
 export interface CategorySpent {
   category: string;
   amount: number;

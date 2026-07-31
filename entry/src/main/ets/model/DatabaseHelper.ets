@@ -1,10 +1,9 @@
 import { relationalStore } from '@kit.ArkData';
 import { Context } from '@kit.AbilityKit';
-import { Bill, BillType, Plan, CategorySpent, ScheduledTask, nextExecutionTime, isWeekend } from './Bill';
+import { Bill, BillType, CategorySpent, ScheduledTask, nextExecutionTime, isWeekend } from './Bill';
 
 const DB_NAME = 'MoneyHarmony.db';
 const TABLE_NAME = 'bills';
-const PLANS_TABLE = 'plans';
 const SCHEDULED_TASKS_TABLE = 'scheduled_tasks';
 const DB_VERSION = 2;
 
@@ -16,14 +15,6 @@ const CREATE_TABLE_SQL = `CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
   date TEXT NOT NULL,
   note TEXT DEFAULT '',
   createTime INTEGER NOT NULL
-)`;
-
-const CREATE_PLANS_SQL = `CREATE TABLE IF NOT EXISTS ${PLANS_TABLE} (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  type TEXT NOT NULL,
-  category TEXT DEFAULT '',
-  targetAmount REAL NOT NULL,
-  month TEXT NOT NULL
 )`;
 
 const CREATE_SCHEDULED_TASKS_SQL = `CREATE TABLE IF NOT EXISTS ${SCHEDULED_TASKS_TABLE} (
@@ -59,7 +50,6 @@ class DatabaseHelper {
       };
       this.store = await relationalStore.getRdbStore(context, config);
       await this.store.executeSql(CREATE_TABLE_SQL);
-      await this.store.executeSql(CREATE_PLANS_SQL);
       await this.store.executeSql(CREATE_SCHEDULED_TASKS_SQL);
       // 老版本数据库升级：补充 skipWeekend 列
       try {
@@ -190,55 +180,7 @@ class DatabaseHelper {
     return { totalIncome: totalIncome, totalExpense: totalExpense } as MonthlyStats;
   }
 
-  // ===== 计划相关方法 =====
-
-  async addPlan(plan: Plan): Promise<number> {
-    if (!this.store) {
-      console.error('Database not initialized');
-      return -1;
-    }
-    const valueBucket: relationalStore.ValuesBucket = {
-      type: plan.type,
-      category: plan.category || '',
-      targetAmount: plan.targetAmount,
-      month: plan.month,
-    };
-    return this.store.insert(PLANS_TABLE, valueBucket);
-  }
-
-  async getPlansByMonth(month: string): Promise<Plan[]> {
-    if (!this.store) {
-      console.error('Database not initialized');
-      return [];
-    }
-    const predicates = new relationalStore.RdbPredicates(PLANS_TABLE);
-    predicates.equalTo('month', month);
-    const resultSet = await this.store.query(predicates, [
-      'id', 'type', 'category', 'targetAmount', 'month',
-    ]);
-    const plans: Plan[] = [];
-    while (resultSet.goToNextRow()) {
-      plans.push({
-        id: resultSet.getLong(resultSet.getColumnIndex('id')),
-        type: resultSet.getString(resultSet.getColumnIndex('type')) as BillType,
-        category: resultSet.getString(resultSet.getColumnIndex('category')),
-        targetAmount: resultSet.getDouble(resultSet.getColumnIndex('targetAmount')),
-        month: resultSet.getString(resultSet.getColumnIndex('month')),
-      });
-    }
-    resultSet.close();
-    return plans;
-  }
-
-  async deletePlan(id: number): Promise<number> {
-    if (!this.store) {
-      console.error('Database not initialized');
-      return 0;
-    }
-    const predicates = new relationalStore.RdbPredicates(PLANS_TABLE);
-    predicates.equalTo('id', id);
-    return this.store.delete(predicates);
-  }
+  // ===== 定时任务相关方法 =====
 
   async getCategorySpent(month: string, type: BillType): Promise<CategorySpent[]> {
     if (!this.store) {
