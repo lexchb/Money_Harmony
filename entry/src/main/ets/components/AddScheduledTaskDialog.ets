@@ -1,4 +1,4 @@
-import { BillType, EXPENSE_CATEGORIES, INCOME_CATEGORIES, ScheduledTask, Plan, todayString } from '../model/Bill';
+import { BillType, getCategories, ScheduledTask, Plan, todayString } from '../model/Bill';
 import { dbHelper } from '../model/DatabaseHelper';
 
 interface IntervalOption {
@@ -26,13 +26,11 @@ export struct AddScheduledTaskDialog {
   @State selectedInterval: string = 'month';
   @State note: string = '';
   @State showDatePicker: boolean = false;
-
-  get categories(): string[] {
-    return this.selectedType === BillType.EXPENSE ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
-  }
+  @State categories: string[] = getCategories(BillType.EXPENSE);
 
   onTypeChange(type: BillType): void {
     this.selectedType = type;
+    this.categories = getCategories(type);
     this.selectedCategory = this.categories[0];
   }
 
@@ -131,7 +129,7 @@ export struct AddScheduledTaskDialog {
                 .padding({ left: 14, right: 14 })
                 .margin({ right: 8, bottom: 8 })
                 .onClick(() => { this.selectedCategory = cat; })
-            })
+            }, (cat: string): string => cat)
           }
           .width('100%')
           .padding({ bottom: 16 })
