@@ -1,5 +1,6 @@
 import { BillType, formatMoney, ScheduledTask } from '../model/Bill';
 import { dbHelper } from '../model/DatabaseHelper';
+import { AddScheduledTaskDialog } from './AddScheduledTaskDialog';
 
 function intervalLabel(intervalType: string): string {
   switch (intervalType) {
@@ -29,9 +30,26 @@ export struct PlanContent {
   @State expensePlanCount: number = 0;
   @State incomePlanCount: number = 0;
   @StorageLink('planNeedRefresh') planNeedRefresh: number = 0;
+  private editDialogController: CustomDialogController | null = null;
 
   aboutToAppear(): void {
     this.loadPlans();
+  }
+
+  /** 点击计划项：打开详情编辑对话框 */
+  openEditDialog(task: ScheduledTask): void {
+    this.editDialogController = new CustomDialogController({
+      builder: AddScheduledTaskDialog({
+        editTask: task,
+        onConfirm: () => {
+          this.loadPlans();
+        }
+      }),
+      autoCancel: true,
+      alignment: DialogAlignment.Bottom,
+      offset: { dx: 0, dy: 0 },
+    });
+    this.editDialogController.open();
   }
 
   async loadPlans(): Promise<void> {
@@ -176,7 +194,10 @@ export struct PlanContent {
                     this.showDeleteConfirm(task);
                   }),
                 TapGesture({})
-                  .onAction(() => {})
+                  .onAction(() => {
+                    // 点击查看并编辑计划详情
+                    this.openEditDialog(task);
+                  })
               )
             )
           }, (task: ScheduledTask): string => `${task.id}_${task.amount}_${task.category}_${task.intervalType}_${task.startTime}`)

@@ -18,6 +18,7 @@ const INTERVAL_OPTIONS: IntervalOption[] = [
 export struct AddScheduledTaskDialog {
   controller: CustomDialogController;
   onConfirm?: () => void;
+  editTask: ScheduledTask | null = null;   // 传入则进入编辑模式
 
   @State selectedType: BillType = BillType.EXPENSE;
   @State amount: string = '';
@@ -28,6 +29,20 @@ export struct AddScheduledTaskDialog {
   @State showDatePicker: boolean = false;
   @State skipWeekend: boolean = false;
   @State categories: string[] = getCategories(BillType.EXPENSE);
+
+  aboutToAppear(): void {
+    if (this.editTask !== null) {
+      // 编辑模式：预填现有任务数据
+      this.selectedType = this.editTask.type;
+      this.categories = getCategories(this.editTask.type);
+      this.selectedCategory = this.editTask.category;
+      this.amount = String(this.editTask.amount);
+      this.selectedDate = new Date(this.editTask.startTime);
+      this.selectedInterval = this.editTask.intervalType;
+      this.note = this.editTask.note;
+      this.skipWeekend = this.editTask.skipWeekend === true;
+    }
+  }
 
   onTypeChange(type: BillType): void {
     this.selectedType = type;
@@ -54,16 +69,23 @@ export struct AddScheduledTaskDialog {
       skipWeekend: this.skipWeekend,
     };
 
-    await dbHelper.addScheduledTask(task);
+    if (this.editTask !== null && this.editTask.id !== undefined) {
+      // 编辑模式：更新现有任务
+      task.id = this.editTask.id;
+      await dbHelper.updateScheduledTask(task);
+    } else {
+      // 新增模式：保存定时任务
+      await dbHelper.addScheduledTask(task);
 
-    // 同步添加到计划列表
-    const plan: Plan = {
-      type: this.selectedType,
-      category: this.selectedCategory,
-      targetAmount: amount,
-      month: todayString().substring(0, 7),
-    };
-    await dbHelper.addPlan(plan);
+      // 同步添加到计划列表
+      const plan: Plan = {
+        type: this.selectedType,
+        category: this.selectedCategory,
+        targetAmount: amount,
+        month: todayString().substring(0, 7),
+      };
+      await dbHelper.addPlan(plan);
+    }
 
     this.controller.close();
     this.onConfirm?.();
@@ -72,7 +94,7 @@ export struct AddScheduledTaskDialog {
   build() {
     Column() {
       // 标题
-      Text('添加定时任务')
+      Text(this.editTask !== null ? '编辑定时任务' : '添加定时任务')
         .fontSize(20)
         .fontWeight(FontWeight.Bold)
         .fontColor('#1a1a1a')

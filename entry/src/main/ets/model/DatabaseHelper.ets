@@ -326,6 +326,26 @@ class DatabaseHelper {
     await this.store.update({ lastExecuted: lastExecuted }, predicates);
   }
 
+  /** 更新定时任务（不修改 lastExecuted，避免已执行任务被重复记账） */
+  async updateScheduledTask(task: ScheduledTask): Promise<number> {
+    if (!this.store) {
+      return 0;
+    }
+    const predicates = new relationalStore.RdbPredicates(SCHEDULED_TASKS_TABLE);
+    predicates.equalTo('id', task.id);
+    const valueBucket: relationalStore.ValuesBucket = {
+      type: task.type,
+      amount: task.amount,
+      category: task.category || '',
+      startTime: task.startTime,
+      intervalType: task.intervalType,
+      note: task.note || '',
+      isActive: task.isActive ? 1 : 0,
+      skipWeekend: task.skipWeekend === true ? 1 : 0,
+    };
+    return this.store.update(valueBucket, predicates);
+  }
+
   async deleteScheduledTask(id: number): Promise<number> {
     if (!this.store) {
       return 0;
