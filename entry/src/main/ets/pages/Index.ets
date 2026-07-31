@@ -22,6 +22,7 @@ struct Index {
   @State isSelectMode: boolean = false;
   @State selectedIds: number[] = [];
   @State activeTab: number = 0;
+  @State planRefreshKey: number = 0;
 
   private pageStack: NavPathStack = new NavPathStack();
   private scheduledTaskDialog: CustomDialogController = new CustomDialogController({
@@ -29,6 +30,8 @@ struct Index {
       onConfirm: () => {
         // 定时任务创建后刷新计划数据
         AppStorage.setOrCreate('planNeedRefresh', (AppStorage.get<number>('planNeedRefresh') ?? 0) + 1);
+        // 通过改变 key 强制重挂载计划页，立即重新加载数据库中的所有计划任务
+        this.planRefreshKey++;
       }
     }),
     autoCancel: true,
@@ -501,10 +504,13 @@ struct Index {
           .padding({ left: 16, right: 16, top: 8, bottom: 8 })
         } else {
           // ===== 计划 Tab =====
-          PlanContent()
-            .layoutWeight(1)
-            .width('100%')
-            .padding({ top: 8, bottom: 8 })
+          // 用 ForEach 的 key 实现强制刷新：key 变化时销毁重建 PlanContent，触发 aboutToAppear 重新加载
+          ForEach([this.planRefreshKey], (key: number) => {
+            PlanContent()
+              .layoutWeight(1)
+              .width('100%')
+              .padding({ top: 8, bottom: 8 })
+          }, (key: number): string => key.toString())
         }
 
         // ===== 底部 Dock 导航栏（毛玻璃效果） =====
