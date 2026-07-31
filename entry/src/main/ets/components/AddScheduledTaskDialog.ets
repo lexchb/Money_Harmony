@@ -26,6 +26,7 @@ export struct AddScheduledTaskDialog {
   @State selectedInterval: string = 'month';
   @State note: string = '';
   @State showDatePicker: boolean = false;
+  @State skipWeekend: boolean = false;
   @State categories: string[] = getCategories(BillType.EXPENSE);
 
   onTypeChange(type: BillType): void {
@@ -50,6 +51,7 @@ export struct AddScheduledTaskDialog {
       intervalType: this.selectedInterval,
       note: this.note,
       isActive: true,
+      skipWeekend: this.skipWeekend,
     };
 
     await dbHelper.addScheduledTask(task);
@@ -149,14 +151,18 @@ export struct AddScheduledTaskDialog {
                 end: new Date(this.selectedDate.getFullYear() + 5, 11, 31),
                 selected: this.selectedDate,
                 offset: { dx: 0, dy: 0 },
-                onAccept: () => {
-                  this.selectedDate = new Date(this.selectedDate.getTime());
+                onDateAccept: (value: Date) => {
+                  // 合并：使用新选择的日期，保留原有时间
+                  const old = this.selectedDate;
+                  this.selectedDate = new Date(value.getFullYear(), value.getMonth(), value.getDate(), old.getHours(), old.getMinutes());
                   // 日期选定后弹出时间选择器
                   TimePickerDialog.show({
                     selected: this.selectedDate,
                     offset: { dx: 0, dy: 0 },
-                    onAccept: () => {
-                      this.selectedDate = new Date(this.selectedDate.getTime());
+                    onAccept: (time: TimePickerResult) => {
+                      // 合并：使用新选择的时间，保留已选日期
+                      const cur = this.selectedDate;
+                      this.selectedDate = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(), time.hour, time.minute);
                     }
                   });
                 }
@@ -176,11 +182,33 @@ export struct AddScheduledTaskDialog {
                 .fontSize(13)
                 .padding({ left: 14, right: 14 })
                 .margin({ right: 8, bottom: 8 })
-                .onClick(() => { this.selectedInterval = opt.value; })
+                .onClick(() => {
+                  this.selectedInterval = opt.value;
+                  if (opt.value !== 'day') {
+                    this.skipWeekend = false;
+                  }
+                })
             })
           }
           .width('100%')
           .padding({ bottom: 16 })
+
+          // ===== 跳过周末（仅每天间隔可用） =====
+          if (this.selectedInterval === 'day') {
+            Row() {
+              Text('跳过周六周日')
+                .fontSize(15)
+                .fontColor('#333')
+              Blank()
+              Toggle({ type: ToggleType.Switch, isOn: this.skipWeekend })
+                .selectedColor('#007aff')
+                .onChange((isOn: boolean) => {
+                  this.skipWeekend = isOn;
+                })
+            }
+            .width('100%')
+            .padding({ bottom: 16 })
+          }
 
           // ===== 备注 =====
           Text('备注（可选）').fontSize(15).fontColor('#333').width('100%').padding({ bottom: 8 })
