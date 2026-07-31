@@ -126,7 +126,7 @@ export struct PlanContent {
       .backgroundColor(Color.White)
       .borderRadius(20)
       .shadow({ radius: 8, color: 'rgba(0,0,0,0.04)', offsetY: 2 })
-      .margin({ left: 16, right: 16, top: 8, bottom: 16 })
+      .margin({ top: 8, bottom: 16 })
 
       // ===== 列表 =====
       if (this.tasks.length === 0) {
@@ -187,6 +187,16 @@ export struct PlanContent {
             .backgroundColor(Color.White)
             .shadow({ radius: 4, color: 'rgba(0,0,0,0.03)', offsetY: 1 })
             .margin({ bottom: 8 })
+            .transition(
+              TransitionEffect.asymmetric(
+                TransitionEffect.translate({ y: 30 })
+                  .combine(TransitionEffect.opacity(0))
+                  .animation({ duration: 300 }),
+                TransitionEffect.translate({ x: -30 })
+                  .combine(TransitionEffect.opacity(0))
+                  .animation({ duration: 200 })
+              )
+            )
             .gesture(
               GestureGroup(GestureMode.Exclusive,
                 LongPressGesture({ duration: 500 })
@@ -206,12 +216,12 @@ export struct PlanContent {
         .height('100%')
         .layoutWeight(1)
         .edgeEffect(EdgeEffect.Spring)
-        .padding({ left: 16, right: 16 })
       }
 
       Blank().height(16)
     }
     .width('100%')
     .height('100%')
+    .padding({ left: 16, right: 16 })
   }
 }
