@@ -56,7 +56,14 @@ export interface ScheduledTask {
   note: string;
   lastExecuted?: number;     // 上次执行时间戳(ms)
   isActive: boolean;
+  skipWeekend?: boolean;     // 每天任务是否跳过周六周日
   createTime?: number;
+}
+
+/** 判断时间戳是否为周末（0=周日, 6=周六） */
+export function isWeekend(ts: number): boolean {
+  const day = new Date(ts).getDay();
+  return day === 0 || day === 6;
 }
 
 export function nextExecutionTime(last: number, intervalType: string): number {

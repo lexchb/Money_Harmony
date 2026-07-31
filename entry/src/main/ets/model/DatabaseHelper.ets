@@ -1,6 +1,6 @@
 import { relationalStore } from '@kit.ArkData';
 import { Context } from '@kit.AbilityKit';
-import { Bill, BillType, Plan, CategorySpent, ScheduledTask, nextExecutionTime } from './Bill';
+import { Bill, BillType, Plan, CategorySpent, ScheduledTask, nextExecutionTime, isWeekend } from './Bill';
 
 const DB_NAME = 'MoneyHarmony.db';
 const TABLE_NAME = 'bills';
@@ -36,6 +36,7 @@ const CREATE_SCHEDULED_TASKS_SQL = `CREATE TABLE IF NOT EXISTS ${SCHEDULED_TASKS
   note TEXT DEFAULT '',
   lastExecuted INTEGER DEFAULT 0,
   isActive INTEGER DEFAULT 1,
+  skipWeekend INTEGER DEFAULT 0,
   createTime INTEGER NOT NULL
 )`;
 
@@ -60,6 +61,12 @@ class DatabaseHelper {
       await this.store.executeSql(CREATE_TABLE_SQL);
       await this.store.executeSql(CREATE_PLANS_SQL);
       await this.store.executeSql(CREATE_SCHEDULED_TASKS_SQL);
+      // 老版本数据库升级：补充 skipWeekend 列
+      try {
+        await this.store.executeSql(`ALTER TABLE ${SCHEDULED_TASKS_TABLE} ADD COLUMN skipWeekend INTEGER DEFAULT 0`);
+      } catch (e) {
+        // 列已存在，忽略
+      }
     } catch (e) {
       console.error('Database init failed:', (e as Error).message);
     }
@@ -269,6 +276,7 @@ class DatabaseHelper {
       note: task.note || '',
       lastExecuted: task.lastExecuted ?? 0,
       isActive: task.isActive ? 1 : 0,
+      skipWeekend: task.skipWeekend === true ? 1 : 0,
       createTime: Date.now(),
     };
     return this.store.insert(SCHEDULED_TASKS_TABLE, valueBucket);
@@ -282,7 +290,7 @@ class DatabaseHelper {
     predicates.equalTo('isActive', 1);
     predicates.orderByAsc('startTime');
     const resultSet = await this.store.query(predicates, [
-      'id', 'type', 'amount', 'category', 'startTime', 'intervalType', 'note', 'lastExecuted', 'isActive', 'createTime',
+      'id', 'type', 'amount', 'category', 'startTime', 'intervalType', 'note', 'lastExecuted', 'isActive', 'skipWeekend', 'createTime',
     ]);
     const tasks: ScheduledTask[] = [];
     while (resultSet.goToNextRow()) {
@@ -299,7 +307,7 @@ class DatabaseHelper {
     const predicates = new relationalStore.RdbPredicates(SCHEDULED_TASKS_TABLE);
     predicates.orderByDesc('createTime');
     const resultSet = await this.store.query(predicates, [
-      'id', 'type', 'amount', 'category', 'startTime', 'intervalType', 'note', 'lastExecuted', 'isActive', 'createTime',
+      'id', 'type', 'amount', 'category', 'startTime', 'intervalType', 'note', 'lastExecuted', 'isActive', 'skipWeekend', 'createTime',
     ]);
     const tasks: ScheduledTask[] = [];
     while (resultSet.goToNextRow()) {
@@ -338,6 +346,7 @@ class DatabaseHelper {
       note: rs.getString(rs.getColumnIndex('note')),
       lastExecuted: rs.getLong(rs.getColumnIndex('lastExecuted')),
       isActive: rs.getLong(rs.getColumnIndex('isActive')) === 1,
+      skipWeekend: rs.getLong(rs.getColumnIndex('skipWeekend')) === 1,
       createTime: rs.getLong(rs.getColumnIndex('createTime')),
     };
   }
@@ -368,6 +377,15 @@ class DatabaseHelper {
       }
 
       if (shouldExecute) {
+        // 本次应执行的时间点（首次为 startTime，之后按间隔推算）
+        const dueTime = task.lastExecuted === 0 ? task.startTime : nextExecutionTime(task.lastExecuted!, task.intervalType);
+
+        // 每天任务且开启跳过周末：周末到期的任务跳过本次，仅推进 lastExecuted 避免重复触发
+        if (task.skipWeekend === true && task.intervalType === 'day' && isWeekend(dueTime)) {
+          await this.updateScheduledTaskLastExecuted(task.id!, dueTime);
+          continue;
+        }
+
         // 创建账单
         const bill: Bill = {
           amount: task.amount,
