@@ -49,68 +49,15 @@
 
 <br />
 
-问题：自定义对话框中分类栏渲染为空
+问题：当前定时计划任务存在的问题- 依赖前台运行 ： setInterval 挂载在 Index 页面生命周期，App 进后台/杀进程后定时器停止
 
-原因和解决方法：
-根本原因
+\- 兜底机制 ：每次启动 aboutToAppear 会立即补检，所以错过的任务在下次打开 App 时仍会补记
 
-分类列表使用 getter 属性返回数组，ForEach 无法对 getter 每次返回的新数组建立响应式依赖，导致界面不渲染：
-
-get categories(): string[] { ... }   // ForEach 渲染为空
-
-### 修复
-
-改用 @State 状态变量存储分类数组，与 AddBill.ets 的写法保持一致：
-
-@State categories: string[] = getCategories(BillType.EXPENSE);
-
-切换收支类型时调用 this.categories = getCategories(type) 重新赋值，ForEach 即可正常渲染并响应切换。
+\- 计划展示 ：定时任务创建时同步生成一条 plans 记录，计划列表即可看到该分类的目标金额与实际进度
 
 <br />
 
-问题：ArkTS 不允许匿名对象字面量（编译错误 arkts-no-untyped-obj-literals）
+**修复方案**
 
-原因和解决方法：
-根本原因
+如果需要 真正后台自动执行 （App 关闭也能触发），需要改用 HarmonyOS WorkScheduler 注册系统级周期任务，这个方案是否可行？
 
-ArkTS 要求对象字面量必须对应显式声明的 class 或 interface，使用内联对象类型声明数组会编译失败：
-
-const INTERVAL_OPTIONS: { label: string; value: string }[] = [...]  // 报错
-
-### 修复
-
-先声明接口再定义数组：
-
-interface IntervalOption { label: string; value: string; }
-const INTERVAL_OPTIONS: IntervalOption[] = [...];
-
-<br />
-
-问题：DatePickerDialog / TimePickerDialog 回调 API 名称与参数类型不一致
-
-原因和解决方法：
-根本原因
-
-API 版本差异导致以下编译错误：
-
-onDateAccept 回调参数不是 DatePickerResult，而是 Callback<Date, void>
-TimePickerDialog 没有 onTimeAccept，正确属性名为 onAccept
-onAccept 回调无参数（不传 Date / TimePickerResult）
-offset 属性类型为 Offset 对象，不能传 [0, 0] 数组
-
-### 修复
-
-统一使用无参 onAccept 回调，通过 selected 传入绑定对象，确认后用 new Date(date.getTime()) 触发状态刷新：
-
-DatePickerDialog.show({
-  selected: this.selectedDate,
-  offset: { dx: 0, dy: 0 },
-  onAccept: () => { ... }
-});
-TimePickerDialog.show({
-  selected: this.selectedDate,
-  offset: { dx: 0, dy: 0 },
-  onAccept: () => { ... }
-});
-
-<br />
