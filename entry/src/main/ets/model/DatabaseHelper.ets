@@ -1,6 +1,6 @@
 import { relationalStore } from '@kit.ArkData';
 import { Context } from '@kit.AbilityKit';
-import { Bill, BillType, CategorySpent, ScheduledTask, nextExecutionTime, isWeekend } from './Bill';
+import { Bill, BillType, CategorySpent, ScheduledTask, nextExecutionTime, isWeekend, todayString } from './Bill';
 
 const DB_NAME = 'MoneyHarmony.db';
 const TABLE_NAME = 'bills';
@@ -348,12 +348,12 @@ class DatabaseHelper {
           continue;
         }
 
-        // 创建账单
+        // 创建账单（date 使用本地日期，避免 UTC 时间导致日期偏移）
         const bill: Bill = {
           amount: task.amount,
           type: task.type,
           category: task.category,
-          date: new Date(now).toISOString().substring(0, 10),
+          date: todayString(),
           note: task.note || `[定时] ${task.intervalType === 'day' ? '每日' : task.intervalType === 'week' ? '每周' : task.intervalType === 'month' ? '每月' : task.intervalType === 'quarter' ? '每季度' : '每年'}记账`,
         };
         await this.addBill(bill);
