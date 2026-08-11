@@ -24,6 +24,8 @@ struct Index {
   @State selectedIds: number[] = [];
   @State activeTab: number = 0;
   @State planRefreshKey: number = 0;
+  // 目标 Tab 按下状态（按下时切换为选中图标）
+  @State targetPressed: boolean = false;
 
   private pageStack: NavPathStack = new NavPathStack();
   private scheduledTaskDialog: CustomDialogController = new CustomDialogController({
@@ -556,31 +558,26 @@ struct Index {
           .alignItems(HorizontalAlign.Center)
           .onClick(() => { this.activeTab = 1; })
 
-          // 我的
+          // 目标
           Column() {
-            SymbolGlyph($r('sys.symbol.person'))
-              .fontSize(22)
-              .fontColor(['#999'])
-            Text('我的')
+            Image(this.targetPressed ? $r('app.media.target_selected') : $r('app.media.target'))
+              .width(24)
+              .height(24)
+            Text('目标')
               .fontSize(10)
               .fontColor('#999')
               .margin({ top: 2 })
           }
           .layoutWeight(1)
           .alignItems(HorizontalAlign.Center)
+          .onTouch((e: TouchEvent) => {
+            if (e.type === TouchType.Down) {
+              this.targetPressed = true;
+            } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+              this.targetPressed = false;
+            }
+          })
 
-          // 设置
-          Column() {
-            SymbolGlyph($r('sys.symbol.gearshape'))
-              .fontSize(22)
-              .fontColor(['#999'])
-            Text('设置')
-              .fontSize(10)
-              .fontColor('#999')
-              .margin({ top: 2 })
-          }
-          .layoutWeight(1)
-          .alignItems(HorizontalAlign.Center)
         }
         .width('100%')
         .height(72)
