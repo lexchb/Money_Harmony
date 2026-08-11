@@ -33,6 +33,15 @@ export function todayString(): string {
   return `${y}-${m}-${d}`;
 }
 
+/** 将时间戳格式化为本地日期 YYYY-MM-DD */
+export function formatDate(ts: number): string {
+  const d = new Date(ts);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export interface CategorySpent {
   category: string;
   amount: number;

@@ -1,6 +1,6 @@
 import { relationalStore } from '@kit.ArkData';
 import { Context } from '@kit.AbilityKit';
-import { Bill, BillType, CategorySpent, ScheduledTask, nextExecutionTime, isWeekend, todayString } from './Bill';
+import { Bill, BillType, CategorySpent, ScheduledTask, nextExecutionTime, isWeekend, formatDate } from './Bill';
 
 const DB_NAME = 'MoneyHarmony.db';
 const TABLE_NAME = 'bills';
@@ -313,7 +313,13 @@ class DatabaseHelper {
     };
   }
 
-  /** 检查并执行到期的定时任务，返回本次执行的账单数量 */
+  /**
+   * 检查并执行到期的定时任务，返回本次执行的账单数量。
+   *
+   * 以 startTime 为锚点沿固定周期推算执行时间点（startTime、startTime+1周期、+2周期…），
+   * 从上次已执行的时间点之后开始，直到当前时刻，逐个时间点执行；
+   * App 关闭期间错过的周期在下次打开时补齐（补记账单日期使用对应的计划日期）。
+   */
   async executeDueScheduledTasks(): Promise<number> {
     if (!this.store) {
       return 0;
@@ -323,42 +329,33 @@ class DatabaseHelper {
     let executedCount = 0;
 
     for (const task of tasks) {
-      let shouldExecute = false;
+      const lastExecuted = task.lastExecuted ?? 0;
 
-      if (task.lastExecuted === 0) {
-        // 从未执行过 → 检查 startTime
-        if (now >= task.startTime) {
-          shouldExecute = true;
-        }
-      } else {
-        // 已执行过 → 计算下次执行时间
-        const nextTime = nextExecutionTime(task.lastExecuted!, task.intervalType);
-        if (now >= nextTime) {
-          shouldExecute = true;
-        }
+      // 以 startTime 为锚点，先定位到第一个未执行过的计划时间点
+      let scheduled = task.startTime;
+      while (scheduled <= lastExecuted) {
+        scheduled = nextExecutionTime(scheduled, task.intervalType);
       }
 
-      if (shouldExecute) {
-        // 本次应执行的时间点（首次为 startTime，之后按间隔推算）
-        const dueTime = task.lastExecuted === 0 ? task.startTime : nextExecutionTime(task.lastExecuted!, task.intervalType);
+      // 逐个执行从上次之后到当前时刻之间所有到期的计划时间点（含补记）
+      while (scheduled <= now) {
+        // 每天任务且开启跳过周末：周六/周日到期的时间点跳过，不创建账单，仅推进 lastExecuted
+        const isSkip = task.skipWeekend === true && task.intervalType === 'day' && isWeekend(scheduled);
 
-        // 每天任务且开启跳过周末：周末到期的任务跳过本次，仅推进 lastExecuted 避免重复触发
-        if (task.skipWeekend === true && task.intervalType === 'day' && isWeekend(dueTime)) {
-          await this.updateScheduledTaskLastExecuted(task.id!, dueTime);
-          continue;
+        if (!isSkip) {
+          const bill: Bill = {
+            amount: task.amount,
+            type: task.type,
+            category: task.category,
+            date: formatDate(scheduled),
+            note: task.note || `[定时] ${task.intervalType === 'day' ? '每日' : task.intervalType === 'week' ? '每周' : task.intervalType === 'month' ? '每月' : task.intervalType === 'quarter' ? '每季度' : '每年'}记账`,
+          };
+          await this.addBill(bill);
+          executedCount++;
         }
 
-        // 创建账单（date 使用本地日期，避免 UTC 时间导致日期偏移）
-        const bill: Bill = {
-          amount: task.amount,
-          type: task.type,
-          category: task.category,
-          date: todayString(),
-          note: task.note || `[定时] ${task.intervalType === 'day' ? '每日' : task.intervalType === 'week' ? '每周' : task.intervalType === 'month' ? '每月' : task.intervalType === 'quarter' ? '每季度' : '每年'}记账`,
-        };
-        await this.addBill(bill);
-        await this.updateScheduledTaskLastExecuted(task.id!, now);
-        executedCount++;
+        await this.updateScheduledTaskLastExecuted(task.id!, scheduled);
+        scheduled = nextExecutionTime(scheduled, task.intervalType);
       }
     }
     return executedCount;
