@@ -268,7 +268,7 @@ struct Index {
                     )
                 } else {
                   Button() {
-                    Image(this.leftBtnPressed ? $r('app.media.上一页-选中') : $r('app.media.上一页'))
+                    Image(this.leftBtnPressed ? $r('app.media.page_prev_selected') : $r('app.media.page_prev'))
                       .width(this.leftBtnPressed ? 24 : 32)
                       .height(this.leftBtnPressed ? 24 : 32)
                       .animation({ duration: 150, curve: Curve.EaseOut })
@@ -296,7 +296,7 @@ struct Index {
                     .margin({ left: 12, right: 12 })
 
                   Button() {
-                    Image(this.rightBtnPressed ? $r('app.media.下一页-选中') : $r('app.media.下一页'))
+                    Image(this.rightBtnPressed ? $r('app.media.page_next_selected') : $r('app.media.page_next'))
                       .width(this.rightBtnPressed ? 24 : 32)
                       .height(this.rightBtnPressed ? 24 : 32)
                       .animation({ duration: 150, curve: Curve.EaseOut })
