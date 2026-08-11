@@ -17,8 +17,9 @@ struct Index {
   @State totalIncome: number = 0;
   @State totalExpense: number = 0;
   @State currentMonth: string = todayString().substring(0, 7);
-  @State leftBtnFontSize: number = 40;
-  @State rightBtnFontSize: number = 40;
+  // 月份切换按钮按下状态（按下时切换为选中图标并缩小）
+  @State leftBtnPressed: boolean = false;
+  @State rightBtnPressed: boolean = false;
   @State isSelectMode: boolean = false;
   @State selectedIds: number[] = [];
   @State activeTab: number = 0;
@@ -267,19 +268,19 @@ struct Index {
                     )
                 } else {
                   Button() {
-                    SymbolGlyph($r('sys.symbol.chevron_left'))
-                      .fontSize(this.leftBtnFontSize)
+                    Image(this.leftBtnPressed ? $r('app.media.上一页-选中') : $r('app.media.上一页'))
+                      .width(this.leftBtnPressed ? 24 : 32)
+                      .height(this.leftBtnPressed ? 24 : 32)
                       .animation({ duration: 150, curve: Curve.EaseOut })
-                      .fontColor(['#007aff'])
                   }
                   .backgroundColor(Color.Transparent)
                   .width(50)
                   .height(50)
                   .onTouch((e: TouchEvent) => {
                     if (e.type === TouchType.Down) {
-                      this.leftBtnFontSize = 30;
+                      this.leftBtnPressed = true;
                     } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-                      this.leftBtnFontSize = 40;
+                      this.leftBtnPressed = false;
                     }
                   })
                   .onClick(() => this.prevMonth())
@@ -295,19 +296,19 @@ struct Index {
                     .margin({ left: 12, right: 12 })
 
                   Button() {
-                    SymbolGlyph($r('sys.symbol.chevron_right'))
-                      .fontSize(this.rightBtnFontSize)
+                    Image(this.rightBtnPressed ? $r('app.media.下一页-选中') : $r('app.media.下一页'))
+                      .width(this.rightBtnPressed ? 24 : 32)
+                      .height(this.rightBtnPressed ? 24 : 32)
                       .animation({ duration: 150, curve: Curve.EaseOut })
-                      .fontColor(['#007aff'])
                   }
                   .backgroundColor(Color.Transparent)
                   .width(50)
                   .height(50)
                   .onTouch((e: TouchEvent) => {
                     if (e.type === TouchType.Down) {
-                      this.rightBtnFontSize = 30;
+                      this.rightBtnPressed = true;
                     } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-                      this.rightBtnFontSize = 40;
+                      this.rightBtnPressed = false;
                     }
                   })
                   .onClick(() => this.nextMonth())
