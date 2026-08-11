@@ -524,12 +524,12 @@ class DatabaseHelper {
     }
     try {
       const legacy = await this.store.querySql(`SELECT id, manualAmount FROM ${GOALS_TABLE} WHERE manualAmount > 0`);
-      const items: { id: number; amount: number }[] = [];
+      const items: LegacyManualItem[] = [];
       while (legacy.goToNextRow()) {
         items.push({
           id: legacy.getLong(legacy.getColumnIndex('id')),
           amount: legacy.getDouble(legacy.getColumnIndex('manualAmount')),
-        });
+        } as LegacyManualItem);
       }
       legacy.close();
       for (const item of items) {
@@ -542,6 +542,11 @@ class DatabaseHelper {
       // 新库不存在 manualAmount 列或已迁移完成，忽略
     }
   }
+}
+
+interface LegacyManualItem {
+  id: number;
+  amount: number;
 }
 
 export const dbHelper = new DatabaseHelper();

@@ -1,5 +1,6 @@
 import { Bill, BillType, getCategories, todayString } from '../model/Bill';
 import { dbHelper } from '../model/DatabaseHelper';
+import { GoalPickerDialog } from './GoalPickerDialog';
 
 @Component
 export struct AddBillPage {
@@ -15,6 +16,17 @@ export struct AddBillPage {
   @State selectedGoalId: number = 0;
 
   private shouldRefresh: boolean = false;
+  private goalPicker: CustomDialogController = new CustomDialogController({
+    builder: GoalPickerDialog({
+      onSelect: (id: number, name: string) => {
+        this.selectedGoalId = id;
+        this.selectedGoalName = name;
+      }
+    }),
+    autoCancel: true,
+    alignment: DialogAlignment.Bottom,
+    offset: { dx: 0, dy: 0 },
+  });
 
   aboutToAppear(): void {
     this.categories = getCategories(this.billType);
@@ -55,24 +67,9 @@ export struct AddBillPage {
     this.pageStack.pop();
   }
 
-  /** 选择将账单计入的目标 */
-  async showGoalPicker(): Promise<void> {
-    const goals = await dbHelper.getGoals();
-    const sheets: SheetInfo[] = [
-      { title: '不关联', action: () => { this.selectedGoalName = ''; this.selectedGoalId = 0; } }
-    ];
-    for (const g of goals) {
-      const goal = g;
-      sheets.push({
-        title: goal.name,
-        action: () => { this.selectedGoalName = goal.name; this.selectedGoalId = goal.id ?? 0; }
-      });
-    }
-    ActionSheet.show({
-      title: '选择目标',
-      message: '将这笔账单计入目标（可选）',
-      sheets: sheets as [SheetInfo, ...SheetInfo[]],
-    });
+  /** 打开目标选择弹窗 */
+  showGoalPicker(): void {
+    this.goalPicker.open();
   }
 
   showDatePicker(): void {
