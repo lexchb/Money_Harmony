@@ -61,3 +61,31 @@
 
 如果需要 真正后台自动执行 （App 关闭也能触发），需要改用 HarmonyOS WorkScheduler 注册系统级周期任务，这个方案是否可行？
 
+<br />
+
+问题：打开"目标详情"对话框时闪退，报错 Cannot read property toFixed of undefined
+
+原因和解决方法：
+
+根本原因
+
+ArkUI 组件 struct 的 build 渲染阶段无法正确解析 getter 属性。在 @CustomDialog 组件中使用了 getter 语法：
+
+```typescript
+get total(): number { ... }
+```
+
+渲染时状态管理框架（stateMgmt）读取 `this.total` 得到 undefined，传入 `formatMoney(undefined)` 后调用 `undefined.toFixed()` 抛出 TypeError，导致应用闪退。
+
+### 修复
+
+将 getter 改为普通方法，在 build 中调用方法获取计算值：
+
+```typescript
+totalValue(): number { ... }
+// build 中
+Text(`¥${formatMoney(this.totalValue())}`)
+```
+
+方法调用在 build 中可以正常解析，规避了 getter 不被状态管理框架识别的问题。
+
