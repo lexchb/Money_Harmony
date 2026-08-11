@@ -11,6 +11,8 @@ export struct AddBillPage {
   @State date: string = todayString();
   @State note: string = '';
   @State categories: string[] = getCategories(BillType.EXPENSE);
+  @State selectedGoalName: string = '';
+  @State selectedGoalId: number = 0;
 
   private shouldRefresh: boolean = false;
 
@@ -45,11 +47,32 @@ export struct AddBillPage {
       category: this.category,
       date: this.date,
       note: this.note,
+      goalId: this.selectedGoalId,
     };
 
     await dbHelper.addBill(bill);
     this.shouldRefresh = true;
     this.pageStack.pop();
+  }
+
+  /** 选择将账单计入的目标 */
+  async showGoalPicker(): Promise<void> {
+    const goals = await dbHelper.getGoals();
+    const sheets: SheetInfo[] = [
+      { title: '不关联', action: () => { this.selectedGoalName = ''; this.selectedGoalId = 0; } }
+    ];
+    for (const g of goals) {
+      const goal = g;
+      sheets.push({
+        title: goal.name,
+        action: () => { this.selectedGoalName = goal.name; this.selectedGoalId = goal.id ?? 0; }
+      });
+    }
+    ActionSheet.show({
+      title: '选择目标',
+      message: '将这笔账单计入目标（可选）',
+      sheets: sheets as [SheetInfo, ...SheetInfo[]],
+    });
   }
 
   showDatePicker(): void {
@@ -147,6 +170,18 @@ export struct AddBillPage {
         .padding({ left: 24, right: 24, top: 16, bottom: 16 })
         .border({ width: { bottom: 0.5 }, color: { bottom: '#eee' } })
         .onClick(() => this.showDatePicker())
+
+        // ===== 目标选择 =====
+        Row() {
+          Text('目标').fontSize(16).fontColor('#333')
+          Blank()
+          Text(this.selectedGoalName === '' ? '不关联' : this.selectedGoalName)
+            .fontSize(16)
+            .fontColor(this.selectedGoalName === '' ? '#999' : '#007aff')
+        }
+        .padding({ left: 24, right: 24, top: 16, bottom: 16 })
+        .border({ width: { bottom: 0.5 }, color: { bottom: '#eee' } })
+        .onClick(() => this.showGoalPicker())
 
         // ===== 备注输入 =====
         Row() {

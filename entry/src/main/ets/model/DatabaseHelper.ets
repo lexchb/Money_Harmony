@@ -1,10 +1,11 @@
 import { relationalStore } from '@kit.ArkData';
 import { Context } from '@kit.AbilityKit';
-import { Bill, BillType, CategorySpent, ScheduledTask, nextExecutionTime, isWeekend, formatDate } from './Bill';
+import { Bill, BillType, CategorySpent, Goal, GoalType, ScheduledTask, nextExecutionTime, isWeekend, formatDate } from './Bill';
 
 const DB_NAME = 'MoneyHarmony.db';
 const TABLE_NAME = 'bills';
 const SCHEDULED_TASKS_TABLE = 'scheduled_tasks';
+const GOALS_TABLE = 'goals';
 const DB_VERSION = 2;
 
 const CREATE_TABLE_SQL = `CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
@@ -14,6 +15,7 @@ const CREATE_TABLE_SQL = `CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
   category TEXT NOT NULL,
   date TEXT NOT NULL,
   note TEXT DEFAULT '',
+  goalId INTEGER DEFAULT 0,
   createTime INTEGER NOT NULL
 )`;
 
@@ -28,6 +30,17 @@ const CREATE_SCHEDULED_TASKS_SQL = `CREATE TABLE IF NOT EXISTS ${SCHEDULED_TASKS
   lastExecuted INTEGER DEFAULT 0,
   isActive INTEGER DEFAULT 1,
   skipWeekend INTEGER DEFAULT 0,
+  createTime INTEGER NOT NULL
+)`;
+
+const CREATE_GOALS_SQL = `CREATE TABLE IF NOT EXISTS ${GOALS_TABLE} (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  targetAmount REAL NOT NULL,
+  periodType TEXT NOT NULL,
+  startTime INTEGER NOT NULL,
+  manualAmount REAL DEFAULT 0,
   createTime INTEGER NOT NULL
 )`;
 
@@ -51,9 +64,16 @@ class DatabaseHelper {
       this.store = await relationalStore.getRdbStore(context, config);
       await this.store.executeSql(CREATE_TABLE_SQL);
       await this.store.executeSql(CREATE_SCHEDULED_TASKS_SQL);
+      await this.store.executeSql(CREATE_GOALS_SQL);
       // 老版本数据库升级：补充 skipWeekend 列
       try {
         await this.store.executeSql(`ALTER TABLE ${SCHEDULED_TASKS_TABLE} ADD COLUMN skipWeekend INTEGER DEFAULT 0`);
+      } catch (e) {
+        // 列已存在，忽略
+      }
+      // 老版本数据库升级：补充 goalId 列
+      try {
+        await this.store.executeSql(`ALTER TABLE ${TABLE_NAME} ADD COLUMN goalId INTEGER DEFAULT 0`);
       } catch (e) {
         // 列已存在，忽略
       }
@@ -73,6 +93,7 @@ class DatabaseHelper {
       category: bill.category,
       date: bill.date,
       note: bill.note || '',
+      goalId: bill.goalId ?? 0,
       createTime: Date.now(),
     };
     return this.store.insert(TABLE_NAME, valueBucket);
@@ -87,7 +108,7 @@ class DatabaseHelper {
     predicates.orderByDesc('date');
     predicates.orderByDesc('createTime');
     const resultSet = await this.store.query(predicates, [
-      'id', 'amount', 'type', 'category', 'date', 'note', 'createTime',
+      'id', 'amount', 'type', 'category', 'date', 'note', 'goalId', 'createTime',
     ]);
     const bills: Bill[] = [];
     while (resultSet.goToNextRow()) {
@@ -98,6 +119,7 @@ class DatabaseHelper {
         category: resultSet.getString(resultSet.getColumnIndex('category')),
         date: resultSet.getString(resultSet.getColumnIndex('date')),
         note: resultSet.getString(resultSet.getColumnIndex('note')),
+        goalId: resultSet.getLong(resultSet.getColumnIndex('goalId')),
         createTime: resultSet.getLong(resultSet.getColumnIndex('createTime')),
       });
     }
@@ -115,7 +137,7 @@ class DatabaseHelper {
     predicates.orderByDesc('date');
     predicates.orderByDesc('createTime');
     const resultSet = await this.store.query(predicates, [
-      'id', 'amount', 'type', 'category', 'date', 'note', 'createTime',
+      'id', 'amount', 'type', 'category', 'date', 'note', 'goalId', 'createTime',
     ]);
     const bills: Bill[] = [];
     while (resultSet.goToNextRow()) {
@@ -126,6 +148,7 @@ class DatabaseHelper {
         category: resultSet.getString(resultSet.getColumnIndex('category')),
         date: resultSet.getString(resultSet.getColumnIndex('date')),
         note: resultSet.getString(resultSet.getColumnIndex('note')),
+        goalId: resultSet.getLong(resultSet.getColumnIndex('goalId')),
         createTime: resultSet.getLong(resultSet.getColumnIndex('createTime')),
       });
     }
@@ -146,6 +169,7 @@ class DatabaseHelper {
       category: bill.category,
       date: bill.date,
       note: bill.note || '',
+      goalId: bill.goalId ?? 0,
     };
     return this.store.update(valueBucket, predicates);
   }
@@ -359,6 +383,107 @@ class DatabaseHelper {
       }
     }
     return executedCount;
+  }
+
+  // ===== 目标相关方法 =====
+
+  async addGoal(goal: Goal): Promise<number> {
+    if (!this.store) {
+      console.error('Database not initialized');
+      return -1;
+    }
+    const valueBucket: relationalStore.ValuesBucket = {
+      name: goal.name,
+      type: goal.type,
+      targetAmount: goal.targetAmount,
+      periodType: goal.periodType,
+      startTime: goal.startTime,
+      manualAmount: goal.manualAmount ?? 0,
+      createTime: Date.now(),
+    };
+    return this.store.insert(GOALS_TABLE, valueBucket);
+  }
+
+  async getGoals(): Promise<Goal[]> {
+    if (!this.store) {
+      return [];
+    }
+    const predicates = new relationalStore.RdbPredicates(GOALS_TABLE);
+    predicates.orderByDesc('createTime');
+    const resultSet = await this.store.query(predicates, [
+      'id', 'name', 'type', 'targetAmount', 'periodType', 'startTime', 'manualAmount', 'createTime',
+    ]);
+    const goals: Goal[] = [];
+    while (resultSet.goToNextRow()) {
+      goals.push(this.rowToGoal(resultSet));
+    }
+    resultSet.close();
+    return goals;
+  }
+
+  /** 更新目标基本信息（不改变 manualAmount） */
+  async updateGoal(goal: Goal): Promise<number> {
+    if (!this.store) {
+      return 0;
+    }
+    const predicates = new relationalStore.RdbPredicates(GOALS_TABLE);
+    predicates.equalTo('id', goal.id);
+    const valueBucket: relationalStore.ValuesBucket = {
+      name: goal.name,
+      type: goal.type,
+      targetAmount: goal.targetAmount,
+      periodType: goal.periodType,
+      startTime: goal.startTime,
+    };
+    return this.store.update(valueBucket, predicates);
+  }
+
+  async updateGoalManualAmount(id: number, amount: number): Promise<number> {
+    if (!this.store) {
+      return 0;
+    }
+    const predicates = new relationalStore.RdbPredicates(GOALS_TABLE);
+    predicates.equalTo('id', id);
+    return this.store.update({ manualAmount: amount }, predicates);
+  }
+
+  async deleteGoal(id: number): Promise<number> {
+    if (!this.store) {
+      return 0;
+    }
+    const predicates = new relationalStore.RdbPredicates(GOALS_TABLE);
+    predicates.equalTo('id', id);
+    return this.store.delete(predicates);
+  }
+
+  /** 查询某目标在日期区间 [startDate, endDate) 内指定收支类型的账单金额合计 */
+  async getGoalSpentInRange(goalId: number, type: BillType, startDate: string, endDate: string): Promise<number> {
+    if (!this.store) {
+      return 0;
+    }
+    const sql = `SELECT COALESCE(SUM(amount), 0) AS total
+      FROM ${TABLE_NAME}
+      WHERE goalId = ? AND type = ? AND date >= ? AND date < ?`;
+    const resultSet = await this.store.querySql(sql, [goalId, type, startDate, endDate]);
+    let total = 0;
+    if (resultSet.goToFirstRow()) {
+      total = resultSet.getDouble(resultSet.getColumnIndex('total'));
+    }
+    resultSet.close();
+    return total;
+  }
+
+  private rowToGoal(rs: relationalStore.ResultSet): Goal {
+    return {
+      id: rs.getLong(rs.getColumnIndex('id')),
+      name: rs.getString(rs.getColumnIndex('name')),
+      type: rs.getString(rs.getColumnIndex('type')) as GoalType,
+      targetAmount: rs.getDouble(rs.getColumnIndex('targetAmount')),
+      periodType: rs.getString(rs.getColumnIndex('periodType')),
+      startTime: rs.getLong(rs.getColumnIndex('startTime')),
+      manualAmount: rs.getDouble(rs.getColumnIndex('manualAmount')),
+      createTime: rs.getLong(rs.getColumnIndex('createTime')),
+    };
   }
 }
 

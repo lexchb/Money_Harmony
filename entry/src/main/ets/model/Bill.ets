@@ -10,6 +10,7 @@ export interface Bill {
   category: string;
   date: string;
   note: string;
+  goalId?: number;   // 关联的目标 id，0 表示不关联
   createTime?: number;
 }
 
@@ -87,4 +88,56 @@ export function nextExecutionTime(last: number, intervalType: string): number {
       break;
   }
   return d.getTime();
+}
+
+// ===== 目标 =====
+
+export enum GoalType {
+  EXPENSE = 'expense',   // 支出目标
+  SAVING = 'saving'      // 攒钱目标
+}
+
+export interface Goal {
+  id?: number;
+  name: string;
+  type: GoalType;
+  targetAmount: number;   // 目标金额
+  periodType: string;     // 'month' | 'quarter' | 'year' 统计周期
+  startTime: number;      // 周期锚点（创建时间）
+  manualAmount: number;   // 手动记录的金额（攒钱目标累计）
+  createTime?: number;
+}
+
+export interface TimeRange {
+  start: number;
+  end: number;
+}
+
+/** 按统计周期推进时间点 */
+export function nextPeriodTime(t: number, periodType: string): number {
+  const d = new Date(t);
+  switch (periodType) {
+    case 'quarter':
+      d.setMonth(d.getMonth() + 3);
+      break;
+    case 'year':
+      d.setFullYear(d.getFullYear() + 1);
+      break;
+    case 'month':
+    default:
+      d.setMonth(d.getMonth() + 1);
+      break;
+  }
+  return d.getTime();
+}
+
+/** 计算目标当前所处的统计周期 [start, end)，以 startTime 为锚点按周期推进 */
+export function goalPeriodRange(goal: Goal, now: number): TimeRange {
+  let start = goal.startTime;
+  let end = nextPeriodTime(start, goal.periodType);
+  while (end <= now) {
+    start = end;
+    end = nextPeriodTime(start, goal.periodType);
+  }
+  return { start: start, end: end } as TimeRange;
 }

@@ -12,6 +12,8 @@ export struct EditBillPage {
   @State date: string = '';
   @State note: string = '';
   @State categories: string[] = getCategories(BillType.EXPENSE);
+  @State selectedGoalName: string = '';
+  @State selectedGoalId: number = 0;
 
   private billId: number = 0;
   private shouldRefresh: boolean = false;
@@ -39,7 +41,19 @@ export struct EditBillPage {
       this.date = bill.date;
       this.note = bill.note;
       this.categories = getCategories(bill.type);
+      this.selectedGoalId = bill.goalId ?? 0;
+      if (this.selectedGoalId > 0) {
+        const goalName = await this.goalNameOf(this.selectedGoalId);
+        this.selectedGoalName = goalName;
+      }
     }
+  }
+
+  /** 根据目标 id 查询目标名称 */
+  async goalNameOf(id: number): Promise<string> {
+    const goals = await dbHelper.getGoals();
+    const g = goals.find(item => item.id === id);
+    return g !== undefined ? g.name : '';
   }
 
   onTypeChange(type: BillType): void {
@@ -64,11 +78,32 @@ export struct EditBillPage {
       category: this.category,
       date: this.date,
       note: this.note,
+      goalId: this.selectedGoalId,
     };
 
     await dbHelper.updateBill(bill);
     this.shouldRefresh = true;
     this.pageStack.pop();
+  }
+
+  /** 选择将账单计入的目标 */
+  async showGoalPicker(): Promise<void> {
+    const goals = await dbHelper.getGoals();
+    const sheets: SheetInfo[] = [
+      { title: '不关联', action: () => { this.selectedGoalName = ''; this.selectedGoalId = 0; } }
+    ];
+    for (const g of goals) {
+      const goal = g;
+      sheets.push({
+        title: goal.name,
+        action: () => { this.selectedGoalName = goal.name; this.selectedGoalId = goal.id ?? 0; }
+      });
+    }
+    ActionSheet.show({
+      title: '选择目标',
+      message: '将这笔账单计入目标（可选）',
+      sheets: sheets as [SheetInfo, ...SheetInfo[]],
+    });
   }
 
   showDatePicker(): void {
@@ -188,6 +223,18 @@ export struct EditBillPage {
         .padding({ left: 24, right: 24, top: 16, bottom: 16 })
         .border({ width: { bottom: 0.5 }, color: { bottom: '#eee' } })
         .onClick(() => this.showDatePicker())
+
+        // ===== 目标选择 =====
+        Row() {
+          Text('目标').fontSize(16).fontColor('#333')
+          Blank()
+          Text(this.selectedGoalName === '' ? '不关联' : this.selectedGoalName)
+            .fontSize(16)
+            .fontColor(this.selectedGoalName === '' ? '#999' : '#007aff')
+        }
+        .padding({ left: 24, right: 24, top: 16, bottom: 16 })
+        .border({ width: { bottom: 0.5 }, color: { bottom: '#eee' } })
+        .onClick(() => this.showGoalPicker())
 
         // ===== 备注输入 =====
         Row() {

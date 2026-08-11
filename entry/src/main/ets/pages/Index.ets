@@ -4,6 +4,8 @@ import { AddBillPage } from '../components/AddBill';
 import { EditBillPage } from '../components/EditBill';
 import { PlanContent } from '../components/Plan';
 import { AddScheduledTaskDialog } from '../components/AddScheduledTaskDialog';
+import { GoalContent } from '../components/Goal';
+import { AddGoalDialog } from '../components/AddGoalDialog';
 
 interface EditBillParam {
   billId: number;
@@ -24,8 +26,7 @@ struct Index {
   @State selectedIds: number[] = [];
   @State activeTab: number = 0;
   @State planRefreshKey: number = 0;
-  // 目标 Tab 按下状态（按下时切换为选中图标）
-  @State targetPressed: boolean = false;
+  @State goalRefreshKey: number = 0;
 
   private pageStack: NavPathStack = new NavPathStack();
   private scheduledTaskDialog: CustomDialogController = new CustomDialogController({
@@ -35,6 +36,19 @@ struct Index {
         AppStorage.setOrCreate('planNeedRefresh', (AppStorage.get<number>('planNeedRefresh') ?? 0) + 1);
         // 通过改变 key 强制重挂载计划页，立即重新加载数据库中的所有计划任务
         this.planRefreshKey++;
+      }
+    }),
+    autoCancel: true,
+    alignment: DialogAlignment.Bottom,
+    offset: { dx: 0, dy: 0 },
+  });
+  private goalDialog: CustomDialogController = new CustomDialogController({
+    builder: AddGoalDialog({
+      onConfirm: () => {
+        // 目标创建后刷新目标数据
+        AppStorage.setOrCreate('goalNeedRefresh', (AppStorage.get<number>('goalNeedRefresh') ?? 0) + 1);
+        // 通过改变 key 强制重挂载目标页，立即重新加载数据库中的所有目标
+        this.goalRefreshKey++;
       }
     }),
     autoCancel: true,
@@ -198,7 +212,7 @@ struct Index {
           }
           .width('100%')
           .padding({ left: 20, right: 20, top: 24, bottom: 12 })
-        } else {
+        } else if (this.activeTab === 1) {
           Row() {
             Text('计划')
               .fontSize(34)
@@ -215,6 +229,26 @@ struct Index {
               .height(36)
               .padding({ left: 16, right: 16 })
               .onClick(() => { this.scheduledTaskDialog.open(); })
+          }
+          .width('100%')
+          .padding({ left: 20, right: 20, top: 24, bottom: 12 })
+        } else {
+          Row() {
+            Text('目标')
+              .fontSize(34)
+              .fontWeight(FontWeight.Bold)
+              .fontColor('#1a1a1a')
+
+            Blank()
+
+            Button('添加目标')
+              .type(ButtonType.Capsule)
+              .backgroundColor('#007aff')
+              .fontColor(Color.White)
+              .fontSize(14)
+              .height(36)
+              .padding({ left: 16, right: 16 })
+              .onClick(() => { this.goalDialog.open(); })
           }
           .width('100%')
           .padding({ left: 20, right: 20, top: 24, bottom: 12 })
@@ -504,11 +538,20 @@ struct Index {
           .layoutWeight(1)
           .width('100%')
           .padding({ left: 16, right: 16, top: 8, bottom: 8 })
-        } else {
+        } else if (this.activeTab === 1) {
           // ===== 计划 Tab =====
           // 用 ForEach 的 key 实现强制刷新：key 变化时销毁重建 PlanContent，触发 aboutToAppear 重新加载
           ForEach([this.planRefreshKey], (key: number) => {
             PlanContent()
+              .layoutWeight(1)
+              .width('100%')
+              .padding({ top: 8, bottom: 8 })
+          }, (key: number): string => key.toString())
+        } else {
+          // ===== 目标 Tab =====
+          // 用 ForEach 的 key 实现强制刷新：key 变化时销毁重建 GoalContent，触发 aboutToAppear 重新加载
+          ForEach([this.goalRefreshKey], (key: number) => {
+            GoalContent()
               .layoutWeight(1)
               .width('100%')
               .padding({ top: 8, bottom: 8 })
@@ -560,23 +603,17 @@ struct Index {
 
           // 目标
           Column() {
-            Image(this.targetPressed ? $r('app.media.target_selected') : $r('app.media.target'))
+            Image(this.activeTab === 2 ? $r('app.media.target_selected') : $r('app.media.target'))
               .width(24)
               .height(24)
             Text('目标')
               .fontSize(10)
-              .fontColor('#999')
+              .fontColor(this.activeTab === 2 ? '#007aff' : '#999')
               .margin({ top: 2 })
           }
           .layoutWeight(1)
           .alignItems(HorizontalAlign.Center)
-          .onTouch((e: TouchEvent) => {
-            if (e.type === TouchType.Down) {
-              this.targetPressed = true;
-            } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-              this.targetPressed = false;
-            }
-          })
+          .onClick(() => { this.activeTab = 2; })
 
         }
         .width('100%')
