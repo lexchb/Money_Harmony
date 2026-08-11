@@ -269,9 +269,8 @@ struct Index {
                 } else {
                   Button() {
                     Image(this.leftBtnPressed ? $r('app.media.page_prev_selected') : $r('app.media.page_prev'))
-                      .width(this.leftBtnPressed ? 24 : 32)
-                      .height(this.leftBtnPressed ? 24 : 32)
-                      .animation({ duration: 150, curve: Curve.EaseOut })
+                      .width(32)
+                      .height(32)
                   }
                   .backgroundColor(Color.Transparent)
                   .width(50)
@@ -297,9 +296,8 @@ struct Index {
 
                   Button() {
                     Image(this.rightBtnPressed ? $r('app.media.page_next_selected') : $r('app.media.page_next'))
-                      .width(this.rightBtnPressed ? 24 : 32)
-                      .height(this.rightBtnPressed ? 24 : 32)
-                      .animation({ duration: 150, curve: Curve.EaseOut })
+                      .width(32)
+                      .height(32)
                   }
                   .backgroundColor(Color.Transparent)
                   .width(50)
