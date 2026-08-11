@@ -3,6 +3,8 @@ import { dbHelper } from '../model/DatabaseHelper';
 
 function periodLabel(p: string): string {
   switch (p) {
+    case 'week':
+      return '每周';
     case 'month':
       return '每月';
     case 'quarter':

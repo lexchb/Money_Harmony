@@ -113,31 +113,40 @@ export interface TimeRange {
   end: number;
 }
 
-/** 按统计周期推进时间点 */
-export function nextPeriodTime(t: number, periodType: string): number {
-  const d = new Date(t);
-  switch (periodType) {
-    case 'quarter':
-      d.setMonth(d.getMonth() + 3);
-      break;
-    case 'year':
-      d.setFullYear(d.getFullYear() + 1);
-      break;
-    case 'month':
-    default:
-      d.setMonth(d.getMonth() + 1);
-      break;
-  }
-  return d.getTime();
-}
-
-/** 计算目标当前所处的统计周期 [start, end)，以 startTime 为锚点按周期推进 */
+/** 计算目标当前所处的统计周期 [start, end)，按日历固定周期计算：
+ *  周：周一 00:00 ~ 下周一 00:00；月：每月 1 日 ~ 次月 1 日；
+ *  季度：每季度首月 1 日 ~ 下一季度首月 1 日；年：1 月 1 日 ~ 次年 1 月 1 日 */
 export function goalPeriodRange(goal: Goal, now: number): TimeRange {
-  let start = goal.startTime;
-  let end = nextPeriodTime(start, goal.periodType);
-  while (end <= now) {
-    start = end;
-    end = nextPeriodTime(start, goal.periodType);
+  const d = new Date(now);
+  let start: Date;
+  let end: Date;
+  switch (goal.periodType) {
+    case 'week': {
+      // 周一为一周开始，周日为结束（周日时向前取到本周一）
+      const day = d.getDay();
+      const diffToMonday = day === 0 ? -6 : 1 - day;
+      start = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diffToMonday);
+      end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7);
+      break;
+    }
+    case 'quarter': {
+      // 每季度首月 1 日（1/4/7/10 月）至下一季度首月 1 日
+      const quarterMonth = Math.floor(d.getMonth() / 3) * 3;
+      start = new Date(d.getFullYear(), quarterMonth, 1);
+      end = new Date(d.getFullYear(), quarterMonth + 3, 1);
+      break;
+    }
+    case 'year': {
+      start = new Date(d.getFullYear(), 0, 1);
+      end = new Date(d.getFullYear() + 1, 0, 1);
+      break;
+    }
+    case 'month':
+    default: {
+      start = new Date(d.getFullYear(), d.getMonth(), 1);
+      end = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      break;
+    }
   }
-  return { start: start, end: end } as TimeRange;
+  return { start: start.getTime(), end: end.getTime() } as TimeRange;
 }

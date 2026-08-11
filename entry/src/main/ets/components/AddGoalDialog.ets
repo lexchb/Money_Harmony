@@ -7,6 +7,7 @@ interface PeriodOption {
 }
 
 const PERIOD_OPTIONS: PeriodOption[] = [
+  { label: '每周', value: 'week' },
   { label: '每月', value: 'month' },
   { label: '每季度', value: 'quarter' },
   { label: '每年', value: 'year' },
