@@ -102,10 +102,16 @@ export interface Goal {
   name: string;
   type: GoalType;
   targetAmount: number;   // 目标金额
-  periodType: string;     // 'month' | 'quarter' | 'year' 统计周期
-  startTime: number;      // 周期锚点（创建时间）
-  manualAmount: number;   // 手动记录的金额（攒钱目标累计）
+  periodType: string;     // 'week' | 'month' | 'quarter' | 'year' 统计周期
+  startTime: number;      // 创建时间
   createTime?: number;
+}
+
+export interface GoalRecord {
+  id?: number;
+  goalId: number;
+  amount: number;
+  createTime: number;
 }
 
 export interface TimeRange {

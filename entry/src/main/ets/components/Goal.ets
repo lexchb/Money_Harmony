@@ -21,7 +21,8 @@ function periodLabel(p: string): string {
 interface GoalItem {
   goal: Goal;
   spent: number;      // 当前周期内关联账单金额
-  total: number;      // 合计（攒钱目标含手动金额）
+  manual: number;     // 当前周期内手动记录金额（攒钱目标）
+  total: number;      // 合计
 }
 
 @Component
@@ -76,7 +77,7 @@ export struct GoalContent {
   }
 
   async loadGoals(): Promise<void> {
-    // 加载数据库中所有目标，并计算当前周期的已记录金额
+    // 加载数据库中所有目标，并计算当前周期的已记录金额（账单 + 手动记录均按当前周期统计）
     const all = await dbHelper.getGoals();
     const now = Date.now();
     const items: GoalItem[] = [];
@@ -84,8 +85,8 @@ export struct GoalContent {
       const range = goalPeriodRange(g, now);
       const billType = g.type === GoalType.EXPENSE ? BillType.EXPENSE : BillType.INCOME;
       const spent = await dbHelper.getGoalSpentInRange(g.id!, billType, formatDate(range.start), formatDate(range.end));
-      const manual = g.type === GoalType.SAVING ? g.manualAmount : 0;
-      items.push({ goal: g, spent: spent, total: spent + manual } as GoalItem);
+      const manual = g.type === GoalType.SAVING ? await dbHelper.getGoalManualTotalInRange(g.id!, range.start, range.end) : 0;
+      items.push({ goal: g, spent: spent, manual: manual, total: spent + manual } as GoalItem);
     }
     this.goals = items;
 
@@ -236,7 +237,7 @@ export struct GoalContent {
                 }
                 .width('100%')
 
-                Text(`本周期已记录 ¥${formatMoney(item.spent)}${item.goal.type === GoalType.SAVING ? ` + 手动 ¥${formatMoney(item.goal.manualAmount)}` : ''}`)
+                Text(`本周期已记录 ¥${formatMoney(item.spent)}${item.goal.type === GoalType.SAVING ? ` + 手动 ¥${formatMoney(item.manual)}` : ''}`)
                   .fontSize(11)
                   .fontColor('#bbb')
                   .margin({ top: 6 })

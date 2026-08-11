@@ -6,6 +6,7 @@ const DB_NAME = 'MoneyHarmony.db';
 const TABLE_NAME = 'bills';
 const SCHEDULED_TASKS_TABLE = 'scheduled_tasks';
 const GOALS_TABLE = 'goals';
+const GOAL_RECORDS_TABLE = 'goal_records';
 const DB_VERSION = 2;
 
 const CREATE_TABLE_SQL = `CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
@@ -44,6 +45,13 @@ const CREATE_GOALS_SQL = `CREATE TABLE IF NOT EXISTS ${GOALS_TABLE} (
   createTime INTEGER NOT NULL
 )`;
 
+const CREATE_GOAL_RECORDS_SQL = `CREATE TABLE IF NOT EXISTS ${GOAL_RECORDS_TABLE} (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  goalId INTEGER NOT NULL,
+  amount REAL NOT NULL,
+  createTime INTEGER NOT NULL
+)`;
+
 export interface MonthlyStats {
   totalIncome: number;
   totalExpense: number;
@@ -65,6 +73,7 @@ class DatabaseHelper {
       await this.store.executeSql(CREATE_TABLE_SQL);
       await this.store.executeSql(CREATE_SCHEDULED_TASKS_SQL);
       await this.store.executeSql(CREATE_GOALS_SQL);
+      await this.store.executeSql(CREATE_GOAL_RECORDS_SQL);
       // 老版本数据库升级：补充 skipWeekend 列
       try {
         await this.store.executeSql(`ALTER TABLE ${SCHEDULED_TASKS_TABLE} ADD COLUMN skipWeekend INTEGER DEFAULT 0`);
@@ -77,6 +86,8 @@ class DatabaseHelper {
       } catch (e) {
         // 列已存在，忽略
       }
+      // 旧版数据迁移：manualAmount 累计字段转为按周期统计的手动记录（记录时间戳为当前时刻，计入当前周期）
+      await this.migrateLegacyManualAmount();
     } catch (e) {
       console.error('Database init failed:', (e as Error).message);
     }
@@ -398,7 +409,7 @@ class DatabaseHelper {
       targetAmount: goal.targetAmount,
       periodType: goal.periodType,
       startTime: goal.startTime,
-      manualAmount: goal.manualAmount ?? 0,
+      manualAmount: 0,
       createTime: Date.now(),
     };
     return this.store.insert(GOALS_TABLE, valueBucket);
@@ -411,7 +422,7 @@ class DatabaseHelper {
     const predicates = new relationalStore.RdbPredicates(GOALS_TABLE);
     predicates.orderByDesc('createTime');
     const resultSet = await this.store.query(predicates, [
-      'id', 'name', 'type', 'targetAmount', 'periodType', 'startTime', 'manualAmount', 'createTime',
+      'id', 'name', 'type', 'targetAmount', 'periodType', 'startTime', 'createTime',
     ]);
     const goals: Goal[] = [];
     while (resultSet.goToNextRow()) {
@@ -421,7 +432,7 @@ class DatabaseHelper {
     return goals;
   }
 
-  /** 更新目标基本信息（不改变 manualAmount） */
+  /** 更新目标基本信息（不改变手动记录） */
   async updateGoal(goal: Goal): Promise<number> {
     if (!this.store) {
       return 0;
@@ -438,13 +449,34 @@ class DatabaseHelper {
     return this.store.update(valueBucket, predicates);
   }
 
-  async updateGoalManualAmount(id: number, amount: number): Promise<number> {
+  /** 新增一条手动记录（攒钱目标），按时间戳计入对应周期 */
+  async addGoalRecord(goalId: number, amount: number, createTime?: number): Promise<number> {
+    if (!this.store) {
+      return -1;
+    }
+    const valueBucket: relationalStore.ValuesBucket = {
+      goalId: goalId,
+      amount: amount,
+      createTime: createTime ?? Date.now(),
+    };
+    return this.store.insert(GOAL_RECORDS_TABLE, valueBucket);
+  }
+
+  /** 查询某目标在时间区间 [start, end) 内手动记录的金额合计 */
+  async getGoalManualTotalInRange(goalId: number, start: number, end: number): Promise<number> {
     if (!this.store) {
       return 0;
     }
-    const predicates = new relationalStore.RdbPredicates(GOALS_TABLE);
-    predicates.equalTo('id', id);
-    return this.store.update({ manualAmount: amount }, predicates);
+    const sql = `SELECT COALESCE(SUM(amount), 0) AS total
+      FROM ${GOAL_RECORDS_TABLE}
+      WHERE goalId = ? AND createTime >= ? AND createTime < ?`;
+    const resultSet = await this.store.querySql(sql, [goalId, start, end]);
+    let total = 0;
+    if (resultSet.goToFirstRow()) {
+      total = resultSet.getDouble(resultSet.getColumnIndex('total'));
+    }
+    resultSet.close();
+    return total;
   }
 
   async deleteGoal(id: number): Promise<number> {
@@ -481,9 +513,34 @@ class DatabaseHelper {
       targetAmount: rs.getDouble(rs.getColumnIndex('targetAmount')),
       periodType: rs.getString(rs.getColumnIndex('periodType')),
       startTime: rs.getLong(rs.getColumnIndex('startTime')),
-      manualAmount: rs.getDouble(rs.getColumnIndex('manualAmount')),
       createTime: rs.getLong(rs.getColumnIndex('createTime')),
     };
+  }
+
+  /** 旧版数据迁移：将 goals 表的 manualAmount 累计值转为手动记录，避免升级后数据丢失 */
+  private async migrateLegacyManualAmount(): Promise<void> {
+    if (!this.store) {
+      return;
+    }
+    try {
+      const legacy = await this.store.querySql(`SELECT id, manualAmount FROM ${GOALS_TABLE} WHERE manualAmount > 0`);
+      const items: { id: number; amount: number }[] = [];
+      while (legacy.goToNextRow()) {
+        items.push({
+          id: legacy.getLong(legacy.getColumnIndex('id')),
+          amount: legacy.getDouble(legacy.getColumnIndex('manualAmount')),
+        });
+      }
+      legacy.close();
+      for (const item of items) {
+        await this.addGoalRecord(item.id, item.amount, Date.now());
+      }
+      if (items.length > 0) {
+        await this.store.executeSql(`UPDATE ${GOALS_TABLE} SET manualAmount = 0`);
+      }
+    } catch (e) {
+      // 新库不存在 manualAmount 列或已迁移完成，忽略
+    }
   }
 }
 

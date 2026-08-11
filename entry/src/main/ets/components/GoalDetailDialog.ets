@@ -42,7 +42,9 @@ export struct GoalDetailDialog {
     const billType = this.goal.type === GoalType.EXPENSE ? BillType.EXPENSE : BillType.INCOME;
     const spent = await dbHelper.getGoalSpentInRange(this.goal.id, billType, formatDate(range.start), formatDate(range.end));
     this.spentAmount = spent;
-    this.manualAmount = this.goal.manualAmount;
+    // 手动记录按当前周期统计，周期结束后自动归零重计
+    const manual = await dbHelper.getGoalManualTotalInRange(this.goal.id, range.start, range.end);
+    this.manualAmount = manual;
     this.rangeText = `${formatDate(range.start)} ~ ${formatDate(range.end)}`;
   }
 
@@ -60,10 +62,8 @@ export struct GoalDetailDialog {
     if (isNaN(num) || num <= 0 || this.goal === null || this.goal.id === undefined) {
       return;
     }
-    const newManual = Math.round((this.manualAmount + num) * 100) / 100;
-    await dbHelper.updateGoalManualAmount(this.goal.id, newManual);
-    this.goal.manualAmount = newManual;
-    this.manualAmount = newManual;
+    await dbHelper.addGoalRecord(this.goal.id, num, Date.now());
+    this.manualAmount = Math.round((this.manualAmount + num) * 100) / 100;
     this.manualInput = '';
     this.onChanged?.();
   }
@@ -158,7 +158,7 @@ export struct GoalDetailDialog {
         // 手动记录（攒钱目标记录收入）
         if (this.goal.type === GoalType.SAVING) {
           Column() {
-            Text('手动记录金额（累计）').fontSize(15).fontColor('#333').width('100%').padding({ bottom: 8 })
+            Text('手动记录金额').fontSize(15).fontColor('#333').width('100%').padding({ bottom: 8 })
             Row() {
               TextInput({ placeholder: '输入金额，例如存入 1000', text: this.manualInput })
                 .type(InputType.NUMBER_DECIMAL)

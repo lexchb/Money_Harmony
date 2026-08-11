@@ -46,11 +46,10 @@ export struct AddGoalDialog {
       targetAmount: amountNum,
       periodType: this.periodType,
       startTime: this.editGoal !== null ? this.editGoal.startTime : Date.now(),
-      manualAmount: this.editGoal !== null ? this.editGoal.manualAmount : 0,
     };
 
     if (this.editGoal !== null && this.editGoal.id !== undefined) {
-      // 编辑模式：更新现有目标（保持周期锚点和手动金额不变）
+      // 编辑模式：更新现有目标（保持创建时间不变）
       goal.id = this.editGoal.id;
       await dbHelper.updateGoal(goal);
     } else {
